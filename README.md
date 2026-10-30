@@ -35,13 +35,36 @@ even if the working tree later changes.
 
 Indexing does not import or execute target code. Tracked symlinks are skipped; oversized,
 undecodable, and unparsable files make coverage partial. Source is stored locally in SQLite.
-This first slice has no MCP server, bee execution, approval UI, or release automation yet.
+The local read-only MCP adapter serves an existing snapshot over stdio. Bee execution,
+approval UI, and release automation remain future work.
+
+## Spot-check it
+
+```bash
+uv run python scripts/spot_check.py
+```
+
+This creates a temporary sample repository, checks known callers and unknowns, verifies saved
+source after an uncommitted edit, and tests the real MCP subprocess. No model API key is needed.
+Use `--keep .worker-bees/demo` to retain a new demo directory for manual inspection.
+See [the testing guide](docs/testing.md) for expected results and commands for your own code.
+
+## Local MCP server
+
+```bash
+uv run worker-bees serve --db .worker-bees/state.db
+```
+
+Index a repository first. The server pins the latest snapshot at startup, or the snapshot selected
+by `--snapshot ID`. It serves six investigation tools and cannot edit files or select arbitrary
+source paths. A quiet terminal is normal: a local MCP client speaks over stdin/stdout.
+See [MCP configuration and tools](docs/mcp.md). Remote HTTP transport is not implemented.
 
 Development checks:
 
 ```bash
-uv run ruff check src tests
-uv run ruff format --check src tests
+uv run ruff check src tests scripts
+uv run ruff format --check src tests scripts
 uv run mypy
 uv run pytest -q
 uv build

@@ -15,8 +15,8 @@ documentation when public behavior or a claimed capability changes.
 
 ```bash
 uv sync --locked
-uv run ruff check src tests
-uv run ruff format --check src tests
+uv run ruff check src tests scripts
+uv run ruff format --check src tests scripts
 uv run mypy
 uv run pytest -q
 uv build
