@@ -24,7 +24,7 @@ Initial Python investigation slice, October 30, 2026.
 
 The foundation implements parts of WB-001 through WB-009 in the plan. It is not a completed
 milestone-1 or v0.1 release: no general imports/non-call-reference API, broader resolver evaluation,
-MCP host test, release license, or public package publication exists. CI is configured; remote CI
+MCP host test or public package publication exists. CI is configured; remote CI
 results are separate from local checks. See architecture.md for coverage and authority boundaries.
 
 ## Local verification
