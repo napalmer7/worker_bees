@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling>=1.26,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "worker-bees"
+version = "0.1.0a1"
+description = "Evidence-aware Python repository investigation and agent coordination"
+readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.10,<3", "typer>=0.15,<1"]
+
+[project.scripts]
+worker-bees = "worker_bees.cli:app"
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.9,<1", "mypy>=1.14,<2"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/worker_bees"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src/worker_bees"]
