@@ -18,7 +18,9 @@ uv run worker-bees serve --db .worker-bees/project.db --snapshot SNAPSHOT_ID
 Copy the snapshot ID from status. If --snapshot is omitted, the server pins the latest snapshot
 at startup. New indexes do not change a running server's view; restart it to select a new one.
 An absent database, incompatible schema, or missing snapshot fails before serving. The server
-does not create state, migrate it, or silently index a repository. Use CLI commands for those actions.
+does not create a database, migrate it, or silently index a repository. Use CLI commands for those actions.
+After upgrading from the earlier database format, run `worker-bees init --db PATH` once to migrate
+existing state before starting the server.
 
 The serve command waits for MCP messages on stdin. A quiet terminal is normal; it is not a
 text chat interface. Stop it with Ctrl+C. It does not open a network port. Logs go to stderr;
@@ -79,6 +81,14 @@ the current prototype still loads the entire bounded snapshot in memory.
 
 The SDK is pinned to mcp==2.3.0 in pyproject.toml and uv.lock. Keep transport changes isolated in
 the adapter and rerun the real stdio tests when upgrading it.
+
+## Optional draft-planning tools
+
+Add `--enable-planning` to the server command or client process arguments to enable validate_plan,
+submit_plan, get_plan, list_tasks, and get_task. Only submit_plan writes; it persists unapproved
+drafts and tracked tasks in the selected database. The server cannot modify source, choose another
+snapshot, approve work, or execute proposed procedures. Without that flag, discovery and database
+access remain read-only. See [feature planning](planning.md) for schema and reassessment details.
 
 ## Repeatable smoke test
 

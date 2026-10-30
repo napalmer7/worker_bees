@@ -1,6 +1,6 @@
 # Implementation status
 
-Python investigation core and read-only MCP adapter, October 30, 2026.
+Python investigation and opt-in draft planning, October 30, 2026.
 
 ## Implemented
 
@@ -14,15 +14,19 @@ Python investigation core and read-only MCP adapter, October 30, 2026.
 - CLI status, symbol search, source context, potential callers, unresolved calls, and reverse
   call impact queries against a chosen snapshot.
 - Curated Python fixture and regression tests covering the production CLI and persistence paths.
-- Local stdio MCP adapter with six structured investigation tools, one startup-pinned snapshot,
+- Default local stdio MCP adapter with six investigation tools, one startup-pinned snapshot,
   explicit input/output limits, and no indexing, filesystem, or mutation tools.
 - Repeatable CLI/MCP spot-check script and guides for testing a sample or an existing repository.
+- Structured plan proposals with feasibility claims, code references, declared requirement coverage,
+  dependency checks, acceptance criteria, validation needs, and unresolved decisions.
+- Transactional draft-plan/task/event creation, idempotent retries, and indexed/spec freshness flags.
+- Five opt-in MCP planning tools and equivalent CLI commands; the default six-tool server is read-only.
 
 ## Next
 
 1. Extend the curated evaluation set and measure results against text-search investigation.
 2. Validate a selected desktop MCP host; the SDK-client stdio path is already tested.
-3. Add structured feature-plan submission, dependency checks, and requirement traceability.
+3. Evaluate model/human-authored plan quality against representative feature requests.
 4. Add ownership leases, approvals, and policy enforcement before any managed bee execution.
 
 The foundation implements parts of WB-001 through WB-010 in the plan. It is not a completed
@@ -32,10 +36,13 @@ results are separate from local checks. See architecture.md for coverage and aut
 
 ## Local verification
 
-Verified on Python 3.12.14: 62 pytest cases, Ruff lint and formatting, strict mypy checks,
-and source/wheel builds pass. The tests include production CLI queries, alias/relative-import
+The local suite includes investigation, CLI/MCP, and planning regression cases. Ruff lint/formatting,
+strict mypy checks, and source/wheel builds pass. The tests include production CLI queries, alias/relative-import
 resolution, uncertain scope handling, syntax/encoding/symlink failures, schema migration,
 state/event rollback, and preservation of old source snapshots after files change or disappear.
 Additional adapter tests cover real current/legacy stdio clients, parity with core queries,
 read-only access, snapshot pinning, path boundaries, partial coverage, and result budgets.
+Planning checks cover coverage, cycles, code references, concurrent retries/conflicts, transaction
+rollback, database upgrades, freshness, and rejection of ownership/approval fields. Planning procedures
+are stored as data, not executed. Feasibility and acceptance quality are not independently established.
 GitHub Actions tests Python 3.12/3.13/3.14; consult the current PR's checks for revision-bound results.

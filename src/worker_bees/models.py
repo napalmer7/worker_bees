@@ -104,6 +104,11 @@ class Task(Record):
     base_revision: str = Field(min_length=1)
     status: TaskStatus = "draft"
     owner: str | None = None
+    plan_id: str | None = None
+    local_id: str | None = None
+    requirement_ids: list[str] = Field(default_factory=list)
+    depends_on: list[str] = Field(default_factory=list)
+    affected_symbols: list[str] = Field(default_factory=list)
 
 
 class Evidence(Record):
