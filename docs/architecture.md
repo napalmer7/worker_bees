@@ -1,16 +1,16 @@
 # Python foundation decisions
 
-Status: initial implementation, October 30, 2026.
+Status: Python investigation core and local MCP adapter, October 30, 2026.
 
 ## Scope
 
 The Python runtime implements a first investigation slice of the coordination specification.
 It reads committed local Git trees, stores revision-bound source evidence, and exposes bounded
-CLI queries. It does not launch agents, approve changes, merge code, or serve MCP yet.
+CLI queries and a read-only MCP adapter. It does not launch agents, approve changes, or merge code.
 
 The single operator invokes CLI commands explicitly. Repository access is selected by the local
-operator at index time. Future MCP tools must query operator-approved snapshots; they must not
-accept arbitrary source paths. Stored source is sensitive to the same degree as the repository.
+operator at index time. MCP tools query one operator-selected snapshot pinned at server startup;
+they cannot select arbitrary source paths. Stored source is sensitive to the same degree as the repository.
 The local database is not a multi-tenant authorization boundary.
 
 ## State and contracts
@@ -53,9 +53,13 @@ files are preserved visibly, so an empty callers query is not an absence proof.
 
 ## Adapter and release decisions
 
-Keep CLI and future MCP adapters thin and reuse Investigation services. Select and test an actual
-MCP client before advertising integration. Select one execution runtime before adding a supervisor.
-No provider is assumed. Transport dependencies and APIs will be pinned when that adapter is built.
+CLI and MCP adapters reuse Investigation services. The official Python MCP SDK is pinned to 2.3.0;
+the adapter serves stdio only and loads existing state in read-only mode. Tests use the actual
+SDK client against a real subprocess in current and legacy modes; no desktop host is certified yet.
+Tool input limits and a 64 KiB structured-result budget bound responses. There are no indexing,
+filesystem, shell, or mutation tools. See docs/mcp.md for configuration and remaining boundaries.
+
+Select one execution runtime before adding a supervisor. No model provider is assumed.
 
 The existing specification documents remain the behavioral contract. Review/release authority
 is not conferred by role names or a task record. The project's license is AGPL-3.0-only;

@@ -117,3 +117,12 @@ def impact(
     """Traverse supported potential callers to a bounded depth."""
     with errors():
         output(investigation(db, snapshot).impact(symbol, depth, limit))
+
+
+@app.command()
+def serve(db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Serve read-only MCP over stdio using an existing snapshot (latest pinned at startup)."""
+    from worker_bees.mcp_server import serve as serve_mcp
+
+    with errors():
+        serve_mcp(db, snapshot)
