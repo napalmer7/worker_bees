@@ -35,8 +35,8 @@ even if the working tree later changes.
 
 Indexing does not import or execute target code. Tracked symlinks are skipped; oversized,
 undecodable, and unparsable files make coverage partial. Source is stored locally in SQLite.
-The local read-only MCP adapter serves an existing snapshot over stdio. Bee execution,
-approval UI, and release automation remain future work.
+The local MCP adapter serves an existing snapshot over stdio. Optional feature planning records
+unapproved drafts and tracked tasks. Bee execution, approval UI, and release automation remain future work.
 
 ## Spot-check it
 
@@ -59,6 +59,19 @@ Index a repository first. The server pins the latest snapshot at startup, or the
 by `--snapshot ID`. It serves six investigation tools and cannot edit files or select arbitrary
 source paths. A quiet terminal is normal: a local MCP client speaks over stdin/stdout.
 See [MCP configuration and tools](docs/mcp.md). Remote HTTP transport is not implemented.
+
+## Feature planning
+
+```bash
+uv run python scripts/spot_check.py --planning --keep .worker-bees/planning-demo
+uv run worker-bees list-tasks negative-price-validation --db .worker-bees/planning-demo/state.db
+```
+
+This tracks a sample plan with requirement links, code references, dependencies, acceptance
+criteria, and validation needs. Feasibility is a human/model-supplied proposal, not an independently
+verified verdict. Draft submission never approves or executes work. The default MCP server stays
+read-only; `--enable-planning` adds five tools, including draft writes. See [the planning guide](docs/planning.md).
+For an existing database, run `worker-bees init --db PATH` once to apply schema migration 3.
 
 Development checks:
 

@@ -72,7 +72,7 @@ def test_upgrade_from_previous_database_preserves_existing_task(tmp_path):
     store = Store(path, writable=True)
     assert store.get_task(work.id) == work
     with store.connect() as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == len(MIGRATIONS)
 
 
 def test_newer_database_is_not_silently_downgraded(tmp_path):
