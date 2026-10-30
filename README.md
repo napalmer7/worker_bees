@@ -72,4 +72,23 @@ A runtime may not support atomic claims, separate workspaces, persistent files, 
 
 This is a generalized adaptation of the WorkerBee Swarm specification and related role/skill templates. Deployment identifiers, personal authority provisions, incident-specific measurements, and stack-specific commands were omitted or moved to profiles. The field guide retains the reusable failure mechanisms and operating rules; use a local appendix for evidence that should remain private or project-specific.
 
-Before public distribution, select and add a license; this package currently makes no explicit reuse grant. Preserve local security and platform instructions when adapting these files.
+Preserve local security and platform instructions when adapting these files.
+
+## License and contributions
+
+Copyright (c) 2026 napalmer7 and Worker Bees contributors.
+
+Worker Bees is licensed under the **GNU Affero General Public License, version 3 only**
+(`AGPL-3.0-only`). See [LICENSE](LICENSE) for the full terms. This declaration applies to
+the original code and accompanying documentation in this repository unless a file states
+otherwise; third-party material retains its own license.
+
+Commercial use is allowed. When conveying covered software, comply with the AGPL source
+and licensing requirements. If you modify Worker Bees and let users interact with that
+modified version remotely over a network, section 13 requires a prominent offer of the
+Corresponding Source to those users. The complete license controls these obligations.
+
+We welcome improvements through pull requests to
+[napalmer7/worker_bees](https://github.com/napalmer7/worker_bees). The license does not require
+submission to this particular repository. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+upstream contribution process and [the licensing rationale](docs/licensing.md) for context.

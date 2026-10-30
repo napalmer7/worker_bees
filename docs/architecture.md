@@ -58,5 +58,5 @@ MCP client before advertising integration. Select one execution runtime before a
 No provider is assumed. Transport dependencies and APIs will be pinned when that adapter is built.
 
 The existing specification documents remain the behavioral contract. Review/release authority
-is not conferred by role names or a task record. License choice remains with the repository owner;
-no public package release or reuse grant is introduced by this implementation.
+is not conferred by role names or a task record. The project's license is AGPL-3.0-only;
+see LICENSE and docs/licensing.md. No public package release is introduced by this implementation.

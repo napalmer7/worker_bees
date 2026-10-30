@@ -7,6 +7,8 @@ name = "worker-bees"
 version = "0.1.0a1"
 description = "Evidence-aware Python repository investigation and agent coordination"
 readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = ["pydantic>=2.10,<3", "typer>=0.15,<1"]
 
