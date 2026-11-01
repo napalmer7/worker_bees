@@ -70,8 +70,25 @@ uv run worker-bees list-tasks negative-price-validation --db .worker-bees/planni
 This tracks a sample plan with requirement links, code references, dependencies, acceptance
 criteria, and validation needs. Feasibility is a human/model-supplied proposal, not an independently
 verified verdict. Draft submission never approves or executes work. The default MCP server stays
-read-only; `--enable-planning` adds five tools, including draft writes. See [the planning guide](docs/planning.md).
+read-only; `--enable-planning` adds planning and assistance tools, including draft writes.
+See [the planning guide](docs/planning.md).
 For an existing database, run `worker-bees init --db PATH` once to apply schema migration 3.
+
+## Agent guidance and acceptance review
+
+With planning enabled, the server exposes `plan_feature` and `review_task_satisfaction` MCP prompts,
+plus `get_workflow_guidance`, `prepare_specification`, and `assess_task` tools. Agents can load a
+workflow, cite specification blocks, and check reported evidence against task acceptance criteria.
+
+```bash
+uv run worker-bees prepare-spec feature.docx
+uv run worker-bees workflow-guidance spec_to_plan --db .worker-bees/state.db
+uv run worker-bees assess-task assessment-request.json --db .worker-bees/state.db
+```
+
+Word intake is a bounded body/table text extraction, with explicit omissions. Acceptance assessments
+are advisory checks of reported evidence and client reviews; they do not verify artifacts, execute
+tests, or mark tasks complete. See [agent guidance and document intake](docs/agent-guidance.md).
 
 Development checks:
 

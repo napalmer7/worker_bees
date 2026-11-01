@@ -84,11 +84,12 @@ the adapter and rerun the real stdio tests when upgrading it.
 
 ## Optional draft-planning tools
 
-Add `--enable-planning` to the server command or client process arguments to enable validate_plan,
-submit_plan, get_plan, list_tasks, and get_task. Only submit_plan writes; it persists unapproved
+Add `--enable-planning` to enable five planning tools and three read-only assistance tools:
+get_workflow_guidance, prepare_specification, and assess_task. Two MCP prompts, plan_feature and
+review_task_satisfaction, provide the corresponding workflows. Only submit_plan writes; it persists unapproved
 drafts and tracked tasks in the selected database. The server cannot modify source, choose another
 snapshot, approve work, or execute proposed procedures. Without that flag, discovery and database
-access remain read-only. See [feature planning](planning.md) for schema and reassessment details.
+access remain read-only. See [feature planning](planning.md) and [agent guidance](agent-guidance.md).
 
 ## Repeatable smoke test
 

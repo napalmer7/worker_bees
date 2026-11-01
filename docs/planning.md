@@ -59,7 +59,8 @@ Every planned requirement needs a linked task. A deferred requirement needs a ra
 task claiming to implement it. A needs_decision requirement needs a rationale and a recorded
 decision question. Tasks cannot reference missing requirements or dependencies. IDs must be
 unique within their respective lists, and dependencies must be acyclic. Each criterion needs a
-validation procedure and expected result. Code references must resolve within the selected
+validation procedure and expected result. Optional source_blocks citations link requirements to
+prepared specification blocks; see [agent guidance](agent-guidance.md). Code references resolve within the selected
 snapshot; intended new symbols belong in task outcomes rather than fabricated evidence.
 
 ## Use your repository
@@ -110,7 +111,7 @@ proposal with a new plan ID and snapshot; changing an ID alone is not reassessme
 
 ## Opt-in MCP planning
 
-The default server still exposes only the six read-only investigation tools. To allow drafts:
+The default server still exposes only six read-only investigation tools. To allow planning:
 
 ```bash
 uv run worker-bees serve --db .worker-bees/project.db --snapshot SNAPSHOT_ID --enable-planning
@@ -123,6 +124,11 @@ uv run worker-bees serve --db .worker-bees/project.db --snapshot SNAPSHOT_ID --e
 | get_plan(plan_id, specification?) | Read a scoped plan and reassessment flags |
 | list_tasks(plan_id, limit=20, offset=0) | Read paginated tracked task state and requirements |
 | get_task(plan_id, task_id) | Read one task and its reassessment context |
+
+The enabled server also offers three read-only assistance tools (get_workflow_guidance,
+prepare_specification, assess_task) and two MCP prompts. See [agent guidance](agent-guidance.md)
+for Word/text intake, source-block citations, and reported-evidence assessment. There are 14 enabled
+tools in total; submit_plan remains the only write.
 
 submit_plan is annotated as a write operation. The flag enables database draft writes; it does
 not permit repository edits, workers, approval, or execution of procedure text. Plan content

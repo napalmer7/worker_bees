@@ -174,7 +174,11 @@ class Store:
             ).fetchone()
             if row is not None:
                 existing = StoredPlan.model_validate_json(row[0])
-                if existing.submission_sha256 != plan.submission_sha256:
+                # Added default fields must preserve retries of older stored proposals.
+                if (
+                    existing.submission_sha256 != plan.submission_sha256
+                    and existing.proposal.model_dump() != plan.proposal.model_dump()
+                ):
                     raise ValueError("plan ID already exists with different content; use a new ID")
                 return False
             connection.execute(

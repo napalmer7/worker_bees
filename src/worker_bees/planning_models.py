@@ -19,6 +19,7 @@ class Requirement(Record):
     outcome: Text
     disposition: Literal["planned", "deferred", "needs_decision"] = "planned"
     rationale: Text | None = None
+    source_blocks: list[Key] = Field(default_factory=list, max_length=50)
 
 
 class ValidationStep(Record):
@@ -86,6 +87,9 @@ class PlanValidation(Record):
     errors: list[str]
     warnings: list[str]
     assessment: Literal["unverified_proposal"] = "unverified_proposal"
+    source_block_coverage: dict[str, list[str]] = Field(default_factory=dict)
+    unmapped_source_blocks: list[str] = Field(default_factory=list)
+    source_mapping: Literal["not_supplied", "provided_unverified"] = "not_supplied"
 
 
 class StoredPlan(Record):

@@ -5,15 +5,19 @@ import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 from pydantic import BaseModel
 
 from worker_bees.analysis import build_index
+from worker_bees.assessment import AssessmentRequest
+from worker_bees.assessment import assess_task as assess_report
+from worker_bees.guidance import Workflow, get_guidance
 from worker_bees.planning import MAX_PROPOSAL_BYTES, Planning
 from worker_bees.planning_models import PlanProposal
 from worker_bees.queries import Investigation
+from worker_bees.specifications import read_specification
 from worker_bees.storage import Store
 
 app = typer.Typer(no_args_is_help=True, help="Investigate committed Python code with evidence.")
@@ -205,3 +209,30 @@ def get_task(plan_id: str, task_id: str, db: DB = DEFAULT_DB, snapshot: Snapshot
     """Read one tracked task using its local task ID within a plan."""
     with errors():
         output(planning(db, snapshot).get_task(plan_id, task_id))
+
+
+@app.command()
+def prepare_spec(document: Path) -> None:
+    """Extract a bounded DOCX/text/Markdown specification and source-block references."""
+    with errors():
+        output(read_specification(document))
+
+
+@app.command()
+def workflow_guidance(workflow: str, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Read the spec_to_plan or assess_task workflow without writing."""
+    with errors():
+        if workflow not in {"spec_to_plan", "assess_task"}:
+            raise ValueError("workflow must be spec_to_plan or assess_task")
+        output(get_guidance(cast(Workflow, workflow), Store(db).load_index(snapshot).snapshot))
+
+
+@app.command()
+def assess_task(report: Path, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Assess reported evidence and client reviews; never complete or approve work."""
+    with errors():
+        with report.open("rb") as source:
+            data = source.read(MAX_PROPOSAL_BYTES + 1)
+        if len(data) > MAX_PROPOSAL_BYTES:
+            raise ValueError("assessment report exceeds the 48 KiB input budget")
+        output(assess_report(planning(db, snapshot), AssessmentRequest.model_validate_json(data)))

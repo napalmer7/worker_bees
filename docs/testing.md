@@ -88,6 +88,8 @@ uv run worker-bees list-tasks negative-price-validation --db .worker-bees/planni
 
 This adds checks for two dependent draft tasks, retry protection, specification reassessment,
 opt-in MCP planning, and rejection of cyclic dependencies. It does not implement the sample feature.
+It also discovers the server's planning/review prompts, prepares document source blocks, and checks
+that an empty evidence report requests evidence rather than claiming task completion.
 See [the planning guide](planning.md) for editing the retained proposal and using your own repository.
 
 ```bash
