@@ -32,3 +32,24 @@ def test_default_spot_check_cleans_up_without_printing_commands_to_deleted_state
     assert "All spot checks passed." in result.stdout
     assert "Temporary demo removed." in result.stdout
     assert "Manual inspection commands" not in result.stdout
+
+
+def test_planning_spot_check_keeps_an_editable_plan(tmp_path):
+    project = Path(__file__).resolve().parents[1]
+    workspace = tmp_path / "planning demo"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(project / "scripts" / "spot_check.py"),
+            "--planning",
+            "--keep",
+            str(workspace),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "unowned draft tasks" in result.stdout
+    assert "Cyclic task dependencies" in result.stdout
+    assert (workspace / "feature-plan.json").is_file()

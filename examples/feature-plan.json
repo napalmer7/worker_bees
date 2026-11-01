@@ -1,0 +1,68 @@
+{
+  "id": "negative-price-validation",
+  "title": "Reject negative prices",
+  "snapshot_id": "REPLACE_WITH_SNAPSHOT_ID",
+  "specification": "Reject negative prices with ValueError instead of silently clamping them to zero. Preserve the existing results for zero and positive prices.",
+  "constraints": ["Do not change unrelated pricing behavior or add dependencies."],
+  "feasibility": {
+    "verdict": "feasible",
+    "summary": "The indexed normalize function contains the current clamping behavior, and total delegates to it. This is proposed as a bounded change with independent validation.",
+    "code_references": [
+      {"symbol": "shop.pricing.normalize", "purpose": "Locate the behavior to change."},
+      {"symbol": "shop.pricing.total", "purpose": "Identify the affected entry point."}
+    ],
+    "assumptions": ["The supplied specification intentionally changes negative-input behavior."],
+    "unknowns": [],
+    "risks": ["Consumers relying on silent normalization will observe ValueError instead."]
+  },
+  "requirements": [
+    {"id": "R1", "outcome": "Negative prices raise ValueError."},
+    {"id": "R2", "outcome": "Zero and positive price results stay unchanged."}
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "outcome": "Implement negative-price rejection and regression tests.",
+      "kind": "implementation",
+      "requirement_ids": ["R1", "R2"],
+      "depends_on": [],
+      "affected_symbols": ["shop.pricing.normalize", "shop.pricing.total"],
+      "exclusions": ["No changes to unrelated service dispatch."],
+      "shared_contracts": ["The exception behavior of total and normalize."],
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "outcome": "Calling normalize or total with a negative value raises ValueError.",
+          "validation": [
+            {"method": "automated", "procedure": "Run regression tests for negative inputs through both functions.", "expected_result": "Both entry points raise ValueError."}
+          ]
+        },
+        {
+          "id": "AC2",
+          "outcome": "Zero and positive inputs preserve their existing results.",
+          "validation": [
+            {"method": "automated", "procedure": "Run zero and positive boundary cases through both entry points.", "expected_result": "Outputs match the unchanged non-negative contract."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T2",
+      "outcome": "Independently review the changed behavior and validation evidence.",
+      "kind": "validation",
+      "requirement_ids": ["R1", "R2"],
+      "depends_on": ["T1"],
+      "affected_symbols": ["shop.pricing.total"],
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "outcome": "A review names the exact implementation revision and checks both requirements.",
+          "validation": [
+            {"method": "inspection", "procedure": "Review the specific change and independently inspect regression results.", "expected_result": "A revision-bound review records findings or a supported pass, with limits."}
+          ]
+        }
+      ]
+    }
+  ],
+  "decisions": []
+}

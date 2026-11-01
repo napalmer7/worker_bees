@@ -1,8 +1,12 @@
+import json
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+
+from worker_bees.analysis import build_index
+from worker_bees.storage import Store
 
 
 def git(root: Path, *args: str) -> str:
@@ -51,3 +55,15 @@ def make_repo(tmp_path):
         return root
 
     return make
+
+
+@pytest.fixture
+def proposed(tmp_path, make_repo):
+    root = make_repo(fixture=True)
+    index = build_index(root)
+    database = tmp_path / "state.db"
+    store = Store(database, writable=True)
+    store.save_index(index)
+    raw = json.loads((Path(__file__).parents[1] / "examples" / "feature-plan.json").read_text())
+    raw["snapshot_id"] = index.snapshot.id
+    return root, database, index, raw

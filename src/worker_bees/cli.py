@@ -11,6 +11,8 @@ import typer
 from pydantic import BaseModel
 
 from worker_bees.analysis import build_index
+from worker_bees.planning import MAX_PROPOSAL_BYTES, Planning
+from worker_bees.planning_models import PlanProposal
 from worker_bees.queries import Investigation
 from worker_bees.storage import Store
 
@@ -120,9 +122,86 @@ def impact(
 
 
 @app.command()
-def serve(db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
-    """Serve read-only MCP over stdio using an existing snapshot (latest pinned at startup)."""
+def serve(db: DB = DEFAULT_DB, snapshot: SnapshotID = None, enable_planning: bool = False) -> None:
+    """Serve pinned MCP investigation; opt in to draft planning with --enable-planning."""
     from worker_bees.mcp_server import serve as serve_mcp
 
     with errors():
-        serve_mcp(db, snapshot)
+        serve_mcp(db, snapshot, enable_planning=enable_planning)
+
+
+def read_proposal(path: Path) -> PlanProposal:
+    with path.open("rb") as source:
+        data = source.read(MAX_PROPOSAL_BYTES + 1)
+    if len(data) > MAX_PROPOSAL_BYTES:
+        raise ValueError("proposal file exceeds the 48 KiB input budget")
+    return PlanProposal.model_validate_json(data)
+
+
+def planning(db: Path, snapshot: str | None, *, writable: bool = False) -> Planning:
+    # Loading through the read-only path first keeps migration an explicit operator action.
+    store = Store(db)
+    index = store.load_index(snapshot)
+    return Planning(Store(db, writable=True) if writable else store, index)
+
+
+@app.command()
+def plan_schema() -> None:
+    """Print the JSON schema for client/human-authored feature-plan proposals."""
+    import json
+
+    typer.echo(json.dumps(PlanProposal.model_json_schema(), indent=2))
+
+
+@app.command()
+def validate_plan(proposal: Path, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Validate a proposal without writing; a structurally invalid plan exits with code 2."""
+    with errors():
+        result = planning(db, snapshot).validate(read_proposal(proposal))
+        output(result)
+        if not result.valid:
+            raise typer.Exit(2)
+
+
+@app.command()
+def submit_plan(proposal: Path, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Persist a valid, unapproved draft and its tasks; identical plan-ID retries are no-ops."""
+    with errors():
+        candidate = read_proposal(proposal)
+        output(planning(db, snapshot, writable=True).submit(candidate, actor="local_cli"))
+
+
+@app.command()
+def get_plan(
+    plan_id: str, db: DB = DEFAULT_DB, snapshot: SnapshotID = None, spec_file: Path | None = None
+) -> None:
+    """Read a draft and freshness flags; optionally compare a current specification file."""
+    with errors():
+        specification = None
+        if spec_file is not None:
+            with spec_file.open("rb") as source:
+                raw = source.read(MAX_PROPOSAL_BYTES + 1)
+            if len(raw) > MAX_PROPOSAL_BYTES:
+                raise ValueError("specification file exceeds the input budget")
+            specification = raw.decode("utf-8")
+        output(planning(db, snapshot).get(plan_id, specification))
+
+
+@app.command()
+def list_tasks(
+    plan_id: str,
+    db: DB = DEFAULT_DB,
+    snapshot: SnapshotID = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> None:
+    """List the draft's tracked tasks, dependencies, acceptance, and validation requirements."""
+    with errors():
+        output(planning(db, snapshot).list_tasks(plan_id, limit, offset))
+
+
+@app.command()
+def get_task(plan_id: str, task_id: str, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Read one tracked task using its local task ID within a plan."""
+    with errors():
+        output(planning(db, snapshot).get_task(plan_id, task_id))

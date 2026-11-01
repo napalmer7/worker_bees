@@ -1,12 +1,13 @@
 # Python foundation decisions
 
-Status: Python investigation core and local MCP adapter, October 30, 2026.
+Status: Python investigation, local MCP, and opt-in planning, October 30, 2026.
 
 ## Scope
 
 The Python runtime implements a first investigation slice of the coordination specification.
 It reads committed local Git trees, stores revision-bound source evidence, and exposes bounded
 CLI queries and a read-only MCP adapter. It does not launch agents, approve changes, or merge code.
+An opt-in planning layer records unapproved plans and draft tasks without changing repository source.
 
 The single operator invokes CLI commands explicitly. Repository access is selected by the local
 operator at index time. MCP tools query one operator-selected snapshot pinned at server startup;
@@ -22,6 +23,7 @@ This is not yet an atomic claim/lease system. Frozen Pydantic records reject ext
 coercion. Read-only query commands open SQLite in read-only mode and do not create missing state.
 
 Migrations 1 and 2 establish coordination records and immutable source snapshots respectively.
+Migration 3 adds snapshot-scoped plans with foreign-key references to the persisted snapshots.
 Index records are stored as versioned JSON payloads in SQLite for this bounded prototype. Queries
 load one snapshot in memory. Normalize the graph into indexed tables when evaluation shows a need;
 do not infer production-scale graph performance from this implementation.
@@ -54,10 +56,30 @@ files are preserved visibly, so an empty callers query is not an absence proof.
 ## Adapter and release decisions
 
 CLI and MCP adapters reuse Investigation services. The official Python MCP SDK is pinned to 2.3.0;
-the adapter serves stdio only and loads existing state in read-only mode. Tests use the actual
+the default adapter serves stdio only and loads existing state in read-only mode. Tests use the actual
 SDK client against a real subprocess in current and legacy modes; no desktop host is certified yet.
-Tool input limits and a 64 KiB structured-result budget bound responses. There are no indexing,
-filesystem, shell, or mutation tools. See docs/mcp.md for configuration and remaining boundaries.
+Tool input limits and a 64 KiB structured-result budget bound responses. The default tool set has
+no indexing, filesystem, shell, or mutation tools. See docs/mcp.md for configuration and boundaries.
+
+## Draft planning
+
+Planning validates a client/human proposal's structure, declared requirement coverage, code
+references, and dependency graph against the selected snapshot. A valid report is not a semantic
+feasibility verdict or approval. Plans include assumptions, unknowns, risks, deferred outcomes,
+human decision questions, acceptance criteria, and validation procedures. No model provider is called.
+
+The CLI submit-plan command, or an MCP server started with --enable-planning, may persist drafts.
+The default server still has only six read-only investigation tools. Opt-in mode adds five tools;
+submit_plan is the only write. It writes a plan, derived unowned tasks, and events in one transaction.
+Stable plan IDs and a canonical submission hash make identical retries no-ops and reject conflicting
+content. Exclusions, shared contracts, kinds, and complete criteria remain in the immutable proposal.
+
+Plans are tied to a snapshot and exact specification hash. Reads are scoped to the operator-selected
+snapshot. Freshness compares the latest indexed metadata for that repository and an optionally supplied
+current specification, not live/unindexed work. Stale plans are flagged without overwriting their history.
+Planned tasks cannot enter readiness/execution through the existing state-transition API until future
+approval and execution gates are implemented. New Task fields have backward-compatible defaults.
+See docs/planning.md for limits, migration, and the testable example.
 
 Select one execution runtime before adding a supervisor. No model provider is assumed.
 

@@ -79,9 +79,21 @@ of the automated tests; supported wire paths are tested with the official SDK cl
 
 ## Automated regression checks
 
+To include draft planning in the demonstration:
+
+```bash
+uv run python scripts/spot_check.py --planning --keep .worker-bees/planning-demo
+uv run worker-bees list-tasks negative-price-validation --db .worker-bees/planning-demo/state.db
+```
+
+This adds checks for two dependent draft tasks, retry protection, specification reassessment,
+opt-in MCP planning, and rejection of cyclic dependencies. It does not implement the sample feature.
+See [the planning guide](planning.md) for editing the retained proposal and using your own repository.
+
 ```bash
 uv run pytest -q
 uv run pytest tests/test_mcp.py -q
+uv run pytest tests/test_planning.py tests/test_planning_adapters.py -q
 uv run ruff check src tests scripts
 uv run ruff format --check src tests scripts
 uv run mypy
