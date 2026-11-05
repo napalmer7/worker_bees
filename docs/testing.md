@@ -107,3 +107,10 @@ current auto-negotiation and legacy initialization, tool discovery, core-query p
 database access, snapshot pinning, cross-repository boundaries, input limits, output budgets,
 and explicit failure/partial-coverage reporting. They do not establish a performance benchmark
 or unrestricted compatibility with every MCP host.
+
+## Operator approval spot check
+
+The --planning spot check also simulates operator approval/revocation in its disposable sample.
+It checks that dependencies block assignment and that execution remains disabled, then restores T1
+to draft. A retained demo includes approval-request.json with the latest generation for another
+reviewed decision. See [task approval](task-approval.md) for the commands and authority boundary.

@@ -10,6 +10,8 @@ from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
 from worker_bees import __version__
+from worker_bees.approval_models import Digest, TaskPolicy
+from worker_bees.approvals import Approvals
 from worker_bees.assessment import AssessmentRequest, TaskAssessment
 from worker_bees.assessment import assess_task as assess_report
 from worker_bees.guidance import Workflow, WorkflowGuidance, get_guidance, render_prompt
@@ -113,6 +115,7 @@ def create_server(
 
     if enable_planning:
         planner = Planning(Store(database, writable=True), investigation.index)
+        approvals = Approvals(Store(database), investigation.index)
         write_hint = ToolAnnotations(
             read_only_hint=False,
             destructive_hint=False,
@@ -149,6 +152,13 @@ def create_server(
         def get_task(plan_id: Key, task_id: Key) -> PlanTaskView:
             """Read a task using its local ID within the selected snapshot's plan."""
             return bounded(lambda: planner.get_task(plan_id, task_id))
+
+        @server.tool(annotations=READ_ONLY, structured_output=True)
+        def check_task_policy(
+            plan_id: Key, task_id: Key, specification_sha256: Digest | None = None
+        ) -> TaskPolicy:
+            """Check assignment gates; approval changes require the operator CLI."""
+            return bounded(lambda: approvals.check(plan_id, task_id, specification_sha256))
 
         @server.tool(annotations=READ_ONLY, structured_output=True)
         def get_workflow_guidance(workflow: Workflow) -> WorkflowGuidance:

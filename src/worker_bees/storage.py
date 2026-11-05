@@ -22,6 +22,11 @@ MIGRATIONS = (
         "REFERENCES snapshots(id), payload TEXT NOT NULL)",
         "CREATE INDEX plans_snapshot ON plans(snapshot_id)",
     ),
+    (
+        "CREATE TABLE task_approvals (task_id TEXT NOT NULL REFERENCES tasks(id), "
+        "generation INTEGER NOT NULL CHECK (generation > 0), payload TEXT NOT NULL, "
+        "PRIMARY KEY (task_id, generation))",
+    ),
 )
 
 
@@ -128,7 +133,9 @@ class Store:
             if task.status != expected:
                 raise ValueError("stale task state; reread before updating")
             if task.plan_id is not None and after not in {"blocked", "cancelled"}:
-                raise ValueError("planned tasks require future approval and execution gates")
+                raise ValueError(
+                    "planned tasks require the operator approval gate; execution is disabled"
+                )
             Transition(before=expected, after=after)
             updated = Task.model_validate(task.model_dump() | {"status": after})
             connection.execute(
