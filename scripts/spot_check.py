@@ -31,6 +31,7 @@ PLANNING_TOOLS = {
     "get_workflow_guidance",
     "prepare_specification",
     "assess_task",
+    "check_task_policy",
 }
 
 
@@ -120,7 +121,7 @@ async def check_planning_mcp(database, snapshot, proposal):
             not retry.is_error and not retry.structured_content["created"],
             "MCP retry should preserve the CLI's existing draft",
         )
-        print("PASS  Opt-in MCP planning discovers fourteen tools and preserves the same draft")
+        print("PASS  Opt-in MCP planning discovers fifteen tools and preserves the same draft")
         prompts = await client.list_prompts()
         require(
             {prompt.name for prompt in prompts.prompts}
@@ -228,6 +229,48 @@ def check_planning(database, snapshot, workspace):
     )
     print("PASS  A changed feature specification flags the stored plan for reassessment")
     asyncio.run(asyncio.wait_for(check_planning_mcp(database, snapshot, proposal), timeout=30))
+    check_approvals(database, workspace, proposal["id"])
+
+
+def check_approvals(database, workspace, plan_id):
+    policy = cli(database, "check-task-policy", plan_id, "T1")
+    require(policy["policy"]["decision"] == "require_approval", "Draft requires operator consent")
+    request = {
+        "plan_id": plan_id,
+        "task_id": "T1",
+        "submission_sha256": policy["submission_sha256"],
+        "specification_sha256": policy["specification_sha256"],
+        "expected_generation": 0,
+        "action": "approve",
+        "reason": "Simulated operator approval for the disposable sample only.",
+    }
+    path = workspace / "approval-request.json"
+    path.write_text(json.dumps(request, indent=2))
+    receipt = cli(database, "decide-task", str(path))
+    require(receipt["task"]["status"] == "ready", "Approved task should be ready")
+    require(receipt["policy"]["policy"]["decision"] == "allow", "Preparation gates should pass")
+    require(receipt["policy"]["execution_available"] is False, "Execution must remain disabled")
+    dependent = cli(database, "check-task-policy", plan_id, "T2")
+    require(
+        any(b.startswith("dependency_incomplete:") for b in dependent["blockers"]),
+        "An incomplete dependency must block assignment",
+    )
+    request.update(
+        action="revoke", expected_generation=1, reason="End sample approval demonstration."
+    )
+    revoke_path = workspace / "revocation-request.json"
+    revoke_path.write_text(json.dumps(request, indent=2))
+    revoked = cli(database, "decide-task", str(revoke_path))
+    require(revoked["task"]["status"] == "draft", "Revocation should restore the draft")
+    require(revoked["policy"]["approval_generation"] == 2, "History must preserve both decisions")
+    # Leave a valid example for a fresh operator decision rather than a stale replay.
+    request.update(
+        action="approve",
+        expected_generation=2,
+        reason="REPLACE after reviewing the sample and its current specification.",
+    )
+    path.write_text(json.dumps(request, indent=2))
+    print("PASS  Simulated operator approval/revocation is audited and never enables execution")
 
 
 def command_text(arguments):

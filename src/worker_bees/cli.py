@@ -11,6 +11,8 @@ import typer
 from pydantic import BaseModel
 
 from worker_bees.analysis import build_index
+from worker_bees.approval_models import ApprovalRequest
+from worker_bees.approvals import Approvals
 from worker_bees.assessment import AssessmentRequest
 from worker_bees.assessment import assess_task as assess_report
 from worker_bees.guidance import Workflow, get_guidance
@@ -236,3 +238,36 @@ def assess_task(report: Path, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) 
         if len(data) > MAX_PROPOSAL_BYTES:
             raise ValueError("assessment report exceeds the 48 KiB input budget")
         output(assess_report(planning(db, snapshot), AssessmentRequest.model_validate_json(data)))
+
+
+@app.command()
+def check_task_policy(
+    plan_id: str,
+    task_id: str,
+    db: DB = DEFAULT_DB,
+    snapshot: SnapshotID = None,
+    specification_sha256: str | None = None,
+) -> None:
+    """Read task approval and assignment blockers. Exit 0 means the report was computed."""
+    with errors():
+        planner = planning(db, snapshot)
+        output(
+            Approvals(planner.store, planner.index).check(plan_id, task_id, specification_sha256)
+        )
+
+
+@app.command()
+def decide_task(
+    decision: Path,
+    db: DB = DEFAULT_DB,
+    snapshot: SnapshotID = None,
+) -> None:
+    """Operator-only approve/revoke from reviewed JSON; never authorize execution or release."""
+    with errors():
+        with decision.open("rb") as source:
+            data = source.read(8193)
+        if len(data) > 8192:
+            raise ValueError("approval request exceeds the 8 KiB input budget")
+        request = ApprovalRequest.model_validate_json(data)
+        planner = planning(db, snapshot, writable=True)
+        output(Approvals(planner.store, planner.index).decide(request))

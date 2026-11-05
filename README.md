@@ -72,7 +72,7 @@ criteria, and validation needs. Feasibility is a human/model-supplied proposal, 
 verified verdict. Draft submission never approves or executes work. The default MCP server stays
 read-only; `--enable-planning` adds planning and assistance tools, including draft writes.
 See [the planning guide](docs/planning.md).
-For an existing database, run `worker-bees init --db PATH` once to apply schema migration 3.
+For an existing database, run `worker-bees init --db PATH` once to apply schema migrations through version 4.
 
 ## Agent guidance and acceptance review
 
@@ -89,6 +89,15 @@ uv run worker-bees assess-task assessment-request.json --db .worker-bees/state.d
 Word intake is a bounded body/table text extraction, with explicit omissions. Acceptance assessments
 are advisory checks of reported evidence and client reviews; they do not verify artifacts, execute
 tests, or mark tasks complete. See [agent guidance and document intake](docs/agent-guidance.md).
+
+Operator approval and revocation are available through the CLI, with a read-only
+`check_task_policy` MCP tool. Approval is bound to the reviewed plan/spec hashes and prepares a
+task for assignment; execution remains disabled. See [task approval](docs/task-approval.md).
+
+```bash
+uv run worker-bees check-task-policy PLAN_ID TASK_ID --db .worker-bees/state.db
+uv run worker-bees decide-task approval.json --db .worker-bees/state.db
+```
 
 Development checks:
 

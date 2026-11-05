@@ -6,8 +6,8 @@ It does not call a model provider, independently establish feasibility, implemen
 run the proposed validation commands, or grant approval to execute work.
 
 Validation reports say unverified_proposal, stored plans and new tasks are drafts, and tasks
-have no owner. The existing transition API cannot move planned tasks into execution/readiness
-without the future approval and execution gates.
+have no owner. The operator approval CLI can separately promote a reviewed task to ready.
+The legacy transition API cannot bypass that gate or enter execution. See [task approval](task-approval.md).
 
 ## Try the complete example
 
@@ -127,7 +127,7 @@ uv run worker-bees serve --db .worker-bees/project.db --snapshot SNAPSHOT_ID --e
 
 The enabled server also offers three read-only assistance tools (get_workflow_guidance,
 prepare_specification, assess_task) and two MCP prompts. See [agent guidance](agent-guidance.md)
-for Word/text intake, source-block citations, and reported-evidence assessment. There are 14 enabled
+for Word/text intake, source-block citations, and reported-evidence assessment. There are 15 enabled
 tools in total; submit_plan remains the only write.
 
 submit_plan is annotated as a write operation. The flag enables database draft writes; it does
