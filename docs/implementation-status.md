@@ -1,6 +1,6 @@
 # Implementation status
 
-Python investigation and opt-in draft planning, October 30, 2026.
+Python investigation, planning, and agent assistance, November 1, 2026.
 
 ## Implemented
 
@@ -21,6 +21,10 @@ Python investigation and opt-in draft planning, October 30, 2026.
   dependency checks, acceptance criteria, validation needs, and unresolved decisions.
 - Transactional draft-plan/task/event creation, idempotent retries, and indexed/spec freshness flags.
 - Five opt-in MCP planning tools and equivalent CLI commands; the default six-tool server is read-only.
+- Two planning/review MCP prompts and three read-only assistance tools for workflow guidance,
+  source-block preparation, and advisory assessment of reported acceptance evidence.
+- Bounded operator-only DOCX/text/Markdown intake, optional requirement source citations, and
+  normalized legacy-plan retry compatibility. No new database migration is required.
 
 ## Next
 
@@ -45,4 +49,7 @@ read-only access, snapshot pinning, path boundaries, partial coverage, and resul
 Planning checks cover coverage, cycles, code references, concurrent retries/conflicts, transaction
 rollback, database upgrades, freshness, and rejection of ownership/approval fields. Planning procedures
 are stored as data, not executed. Feasibility and acceptance quality are not independently established.
+Assistance tests cover document omissions/limits, malformed packages, source offsets/hashes,
+prompt discovery, evidence revisions/methods, missing validation, conflicting results, and
+advisory-only recommendations without task-state changes.
 GitHub Actions tests Python 3.12/3.13/3.14; consult the current PR's checks for revision-bound results.

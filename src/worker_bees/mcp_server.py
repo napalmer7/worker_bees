@@ -10,6 +10,9 @@ from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
 from worker_bees import __version__
+from worker_bees.assessment import AssessmentRequest, TaskAssessment
+from worker_bees.assessment import assess_task as assess_report
+from worker_bees.guidance import Workflow, WorkflowGuidance, get_guidance, render_prompt
 from worker_bees.models import ContextResult, QueryResult, StatusResult
 from worker_bees.planning import Planning
 from worker_bees.planning_models import (
@@ -23,6 +26,8 @@ from worker_bees.planning_models import (
     Specification,
 )
 from worker_bees.queries import Investigation
+from worker_bees.specifications import PreparedSpecification
+from worker_bees.specifications import prepare_specification as prepare_text
 from worker_bees.storage import Store
 
 QueryText = Annotated[str, Field(strict=True, min_length=1, max_length=512)]
@@ -64,6 +69,7 @@ def create_server(
             "Tools cannot change the repository or selected snapshot. "
             + (
                 "Planning may persist drafts and tasks; it grants no execution authority. "
+                "Use get_workflow_guidance before interpreting specs or assessing task evidence. "
                 if enable_planning
                 else "No tool can change the database. "
             )
@@ -143,6 +149,33 @@ def create_server(
         def get_task(plan_id: Key, task_id: Key) -> PlanTaskView:
             """Read a task using its local ID within the selected snapshot's plan."""
             return bounded(lambda: planner.get_task(plan_id, task_id))
+
+        @server.tool(annotations=READ_ONLY, structured_output=True)
+        def get_workflow_guidance(workflow: Workflow) -> WorkflowGuidance:
+            """Get versioned spec interpretation/planning or task-review instructions."""
+            return bounded(lambda: get_guidance(workflow, snapshot))
+
+        @server.tool(annotations=READ_ONLY, structured_output=True)
+        def prepare_specification(
+            text: Specification, title: QueryText = "Specification"
+        ) -> PreparedSpecification:
+            """Prepare client-extracted text with a hash and block IDs; never open a file path."""
+            return bounded(lambda: prepare_text(text, title))
+
+        @server.tool(annotations=READ_ONLY, structured_output=True)
+        def assess_task(report: AssessmentRequest) -> TaskAssessment:
+            """Check reported evidence/reviews; do not verify artifacts or change task status."""
+            return bounded(lambda: assess_report(planner, report))
+
+        @server.prompt()
+        def plan_feature() -> str:
+            """Guide a client from document interpretation to a repository-grounded draft."""
+            return render_prompt("spec_to_plan", snapshot)
+
+        @server.prompt()
+        def review_task_satisfaction() -> str:
+            """Guide semantic acceptance and evidence review without granting approval."""
+            return render_prompt("assess_task", snapshot)
 
     return server
 

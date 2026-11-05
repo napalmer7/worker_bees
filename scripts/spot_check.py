@@ -22,7 +22,16 @@ EXPECTED_TOOLS = {
     "analyze_impact",
     "get_unresolved_calls",
 }
-PLANNING_TOOLS = {"validate_plan", "submit_plan", "get_plan", "list_tasks", "get_task"}
+PLANNING_TOOLS = {
+    "validate_plan",
+    "submit_plan",
+    "get_plan",
+    "list_tasks",
+    "get_task",
+    "get_workflow_guidance",
+    "prepare_specification",
+    "assess_task",
+}
 
 
 def require(condition, message):
@@ -111,7 +120,44 @@ async def check_planning_mcp(database, snapshot, proposal):
             not retry.is_error and not retry.structured_content["created"],
             "MCP retry should preserve the CLI's existing draft",
         )
-        print("PASS  Opt-in MCP planning discovers eleven tools and preserves the same draft")
+        print("PASS  Opt-in MCP planning discovers fourteen tools and preserves the same draft")
+        prompts = await client.list_prompts()
+        require(
+            {prompt.name for prompt in prompts.prompts}
+            == {"plan_feature", "review_task_satisfaction"},
+            "Planning and review prompts must be discoverable",
+        )
+        guidance = await client.call_tool("get_workflow_guidance", {"workflow": "spec_to_plan"})
+        require(
+            not guidance.is_error and guidance.structured_content["steps"],
+            "Server must provide actionable planning instructions",
+        )
+        prepared = await client.call_tool(
+            "prepare_specification", {"text": proposal["specification"]}
+        )
+        require(
+            not prepared.is_error and prepared.structured_content["blocks"][0]["id"] == "B0001",
+            "Specification preparation must expose source block IDs",
+        )
+        print("PASS  Server supplies review/planning prompts, instructions, and source blocks")
+        report = {
+            "plan_id": proposal["id"],
+            "task_id": "T1",
+            "implementation_revision": (
+                await client.call_tool("get_index_status")
+            ).structured_content["snapshot"]["commit"],
+        }
+        assessed = await client.call_tool("assess_task", {"report": report})
+        require(
+            not assessed.is_error
+            and assessed.structured_content["recommendation"] == "needs_evidence",
+            "A task with no evidence cannot be supported",
+        )
+        require(
+            assessed.structured_content["task_status_changed"] is False,
+            "Advisory assessment must not change task state",
+        )
+        print("PASS  Acceptance assessment requests evidence and leaves task state unchanged")
         cyclic = json.loads(json.dumps(proposal))
         cyclic["tasks"][0]["depends_on"] = ["T2"]
         report = await client.call_tool("validate_plan", {"proposal": cyclic})
@@ -129,6 +175,28 @@ def check_planning(database, snapshot, workspace):
     proposal["snapshot_id"] = snapshot
     path = workspace / "feature-plan.json"
     path.write_text(json.dumps(proposal, indent=2))
+    specification = workspace / "feature-spec.md"
+    specification.write_text(proposal["specification"])
+    prepared = subprocess.run(
+        [sys.executable, "-m", "worker_bees", "prepare-spec", str(specification)],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    require(json.loads(prepared.stdout)["blocks"][0]["id"] == "B0001", "CLI source intake failed")
+    (workspace / "assessment-request.json").write_text(
+        json.dumps(
+            {
+                "plan_id": proposal["id"],
+                "task_id": "T1",
+                "implementation_revision": cli(database, "status")["snapshot"]["commit"],
+                "evidence": [],
+                "reviews": [],
+            },
+            indent=2,
+        )
+    )
     report = cli(database, "validate-plan", str(path))
     require(
         report["valid"] and report["ordered_task_ids"] == ["T1", "T2"],

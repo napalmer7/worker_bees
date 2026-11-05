@@ -14,6 +14,7 @@ from worker_bees.planning_models import (
     StoredPlan,
 )
 from worker_bees.queries import Investigation
+from worker_bees.specifications import prepare_specification
 from worker_bees.storage import Store
 
 MAX_PROPOSAL_BYTES = 49_152
@@ -53,6 +54,39 @@ class Planning:
         requirements = {r.id: r for r in proposal.requirements}
         tasks = {t.id: t for t in proposal.tasks}
         coverage: dict[str, list[str]] = {key: [] for key in requirements}
+        source_coverage: dict[str, list[str]] = {}
+        unmapped: list[str] = []
+        has_source_mapping = any(requirement.source_blocks for requirement in proposal.requirements)
+        if has_source_mapping:
+            try:
+                blocks = {
+                    block.id for block in prepare_specification(proposal.specification).blocks
+                }
+            except ValueError as error:
+                errors.append(str(error))
+                blocks = set()
+            used: set[str] = set()
+            for requirement in proposal.requirements:
+                source_coverage[requirement.id] = list(requirement.source_blocks)
+                if len(requirement.source_blocks) != len(set(requirement.source_blocks)):
+                    errors.append(
+                        f"requirement {requirement.id}: duplicate source block references"
+                    )
+                for block_id in requirement.source_blocks:
+                    if block_id not in blocks:
+                        errors.append(
+                            f"requirement {requirement.id}: unknown source block {block_id}"
+                        )
+                    used.add(block_id)
+            unmapped = sorted(blocks - used)
+            warnings.append(
+                "Source citations are links, not proof of interpretation or completeness. "
+                "Review uncited requirements and unmapped blocks; context may not be a requirement."
+            )
+        else:
+            warnings.append(
+                "No specification block citations were supplied; source mapping is unassessed."
+            )
         for task in proposal.tasks:
             if len(task.requirement_ids) != len(set(task.requirement_ids)):
                 errors.append(f"task {task.id}: duplicate requirement links")
@@ -133,6 +167,9 @@ class Planning:
             requirement_coverage=coverage,
             errors=errors,
             warnings=warnings,
+            source_block_coverage=source_coverage,
+            unmapped_source_blocks=unmapped,
+            source_mapping="provided_unverified" if has_source_mapping else "not_supplied",
         )
 
     def _check_symbol(self, identifier: str, context: str, errors: list[str]) -> None:
@@ -147,6 +184,22 @@ class Planning:
         if not self.store.writable:
             raise ValueError("planning submission requires explicit write access")
         validation = self.validate(proposal)
+        try:
+            existing = self.store.get_plan(proposal.id, self.index.snapshot.id)
+        except ValueError:
+            existing = None
+        if existing is not None and existing.proposal.model_dump() == proposal.model_dump():
+            # A retry replays an immutable accepted draft, including older schemas/defaults.
+            # It grants no new authority and must not rewrite task progress or historical hashes.
+            return PlanReceipt(
+                plan_id=proposal.id,
+                snapshot_id=existing.snapshot.id,
+                base_revision=existing.snapshot.commit,
+                specification_sha256=existing.specification_sha256,
+                task_ids=[f"{proposal.id}:{task.id}" for task in existing.proposal.tasks],
+                created=False,
+                warnings=validation.warnings,
+            )
         if not validation.valid:
             raise ValueError("invalid plan: " + "; ".join(validation.errors))
         canonical = json.dumps(

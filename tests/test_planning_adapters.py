@@ -82,7 +82,7 @@ def test_real_stdio_opt_in_planning_workflow(proposed, mode, tmp_path):
     async def scenario():
         async with Client(parameters, mode=mode, read_timeout_seconds=10) as client:
             discovery = await client.list_tools()
-            assert len(discovery.tools) == 11
+            assert len(discovery.tools) == 14
             assert PLANNING_TOOLS.issubset({tool.name for tool in discovery.tools})
             annotations = {tool.name: tool.annotations for tool in discovery.tools}
             assert annotations["submit_plan"].read_only_hint is False

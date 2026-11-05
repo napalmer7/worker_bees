@@ -1,6 +1,6 @@
 # Python foundation decisions
 
-Status: Python investigation, local MCP, and opt-in planning, October 30, 2026.
+Status: Python investigation, local MCP, planning, and agent assistance, November 1, 2026.
 
 ## Scope
 
@@ -69,7 +69,8 @@ feasibility verdict or approval. Plans include assumptions, unknowns, risks, def
 human decision questions, acceptance criteria, and validation procedures. No model provider is called.
 
 The CLI submit-plan command, or an MCP server started with --enable-planning, may persist drafts.
-The default server still has only six read-only investigation tools. Opt-in mode adds five tools;
+The default server still has only six read-only investigation tools. Opt-in adds five planning tools
+and three read-only assistance tools, plus two MCP prompts;
 submit_plan is the only write. It writes a plan, derived unowned tasks, and events in one transaction.
 Stable plan IDs and a canonical submission hash make identical retries no-ops and reject conflicting
 content. Exclusions, shared contracts, kinds, and complete criteria remain in the immutable proposal.
@@ -80,6 +81,30 @@ current specification, not live/unindexed work. Stale plans are flagged without 
 Planned tasks cannot enter readiness/execution through the existing state-transition API until future
 approval and execution gates are implemented. New Task fields have backward-compatible defaults.
 See docs/planning.md for limits, migration, and the testable example.
+
+## Agent assistance
+
+Versioned guidance is exposed through both structured tools and standard MCP prompts so clients
+can load a spec-to-plan workflow or an evidence/acceptance-review rubric. The client supplies model
+reasoning. No provider inference, document instructions, or reported reviewer identity grants authority.
+
+prepare_specification accepts client-provided text and returns exact text, a hash, and block IDs/
+character offsets. The operator's prepare-spec CLI can additionally extract bounded DOCX body/table
+text. It reads one byte snapshot, never extracts package entries or follows external relationships,
+rejects unsafe/unsupported packages and tracked changes, and reports content omissions. It is not a
+Word renderer or an OCR engine. File paths are not exposed in MCP document-intake arguments.
+
+Optional requirement source_blocks are checked structurally against the exact plan specification.
+They improve provenance without proving interpretation or complete requirement extraction. Legacy
+plans without citations remain unassessed for source mapping. Normalized equality preserves identical
+legacy retries after additive defaults, including near-budget records; hashes/progress are not rewritten.
+
+assess_task checks client-reported evidence revisions, validation methods/steps, contradictions,
+semantic review references, and plan/task blockers. It returns missing/rejected support and an advisory
+recommendation; matching reports are labeled reported_support, not verified. It never opens artifacts,
+fetches candidate commits, executes validations, persists assessments, or changes task status. The
+client must obtain authorized source/artifacts and perform semantic/independent review. See
+docs/agent-guidance.md for capabilities, limitations, and examples.
 
 Select one execution runtime before adding a supervisor. No model provider is assumed.
 
