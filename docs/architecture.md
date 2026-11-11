@@ -1,6 +1,6 @@
 # Python foundation decisions
 
-Status: Python investigation, local MCP, planning, and agent assistance, November 1, 2026.
+Status: Python investigation, local MCP, planning, and agent assistance, November 5, 2026.
 
 ## Scope
 
@@ -19,10 +19,12 @@ The local database is not a multi-tenant authorization boundary.
 SQLite is authoritative for snapshots, tasks, and events. A task update and its event are committed
 in the same transaction. Transitions compare the expected prior state under a write lock.
 Task execution/completion transitions are disabled until ownership and evidence gates exist.
+Operator approval is a separate transactional gate that can promote reviewed planned tasks to ready.
 This is not yet an atomic claim/lease system. Frozen Pydantic records reject extra fields and
 coercion. Read-only query commands open SQLite in read-only mode and do not create missing state.
 
 Migrations 1 and 2 establish coordination records and immutable source snapshots respectively.
+Migration 4 adds append-only task approval decisions with per-task generations.
 Migration 3 adds snapshot-scoped plans with foreign-key references to the persisted snapshots.
 Index records are stored as versioned JSON payloads in SQLite for this bounded prototype. Queries
 load one snapshot in memory. Normalize the graph into indexed tables when evaluation shows a need;
@@ -69,8 +71,8 @@ feasibility verdict or approval. Plans include assumptions, unknowns, risks, def
 human decision questions, acceptance criteria, and validation procedures. No model provider is called.
 
 The CLI submit-plan command, or an MCP server started with --enable-planning, may persist drafts.
-The default server still has only six read-only investigation tools. Opt-in adds five planning tools
-and three read-only assistance tools, plus two MCP prompts;
+The default server still has only six read-only investigation tools. Opt-in adds five planning tools,
+three read-only assistance tools, one read-only policy check, and two MCP prompts;
 submit_plan is the only write. It writes a plan, derived unowned tasks, and events in one transaction.
 Stable plan IDs and a canonical submission hash make identical retries no-ops and reject conflicting
 content. Exclusions, shared contracts, kinds, and complete criteria remain in the immutable proposal.
@@ -78,8 +80,13 @@ content. Exclusions, shared contracts, kinds, and complete criteria remain in th
 Plans are tied to a snapshot and exact specification hash. Reads are scoped to the operator-selected
 snapshot. Freshness compares the latest indexed metadata for that repository and an optionally supplied
 current specification, not live/unindexed work. Stale plans are flagged without overwriting their history.
-Planned tasks cannot enter readiness/execution through the existing state-transition API until future
-approval and execution gates are implemented. New Task fields have backward-compatible defaults.
+Planned tasks can enter ready only through the operator approval gate; the legacy state-transition
+API cannot bypass it or enter execution. The gate checks reviewed plan/spec hashes, indexed freshness,
+feasibility, and linked decisions. Dependencies may await completion after consent but block assignment
+preparation. Approval/revocation and task/event writes share a transaction; stale generations fail.
+MCP can only read policy. Local CLI/database access is the operator boundary, not authenticated identity.
+See task-approval.md for scope and the remaining lease/execution gates.
+New Task fields have backward-compatible defaults.
 See docs/planning.md for limits, migration, and the testable example.
 
 ## Agent assistance

@@ -1,0 +1,9 @@
+{
+  "plan_id": "negative-price-validation",
+  "task_id": "T1",
+  "submission_sha256": "REPLACE_WITH_REVIEWED_SUBMISSION_SHA256",
+  "specification_sha256": "REPLACE_WITH_CURRENT_REVIEWED_TEXT_SHA256",
+  "expected_generation": 0,
+  "action": "approve",
+  "reason": "REPLACE after reviewing scope, source, constraints, acceptance criteria, and the current specification."
+}
