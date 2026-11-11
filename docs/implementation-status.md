@@ -1,6 +1,6 @@
 # Implementation status
 
-Python investigation, planning, and agent assistance, November 5, 2026.
+Python investigation, planning, and agent assistance, November 11, 2026.
 
 ## Implemented
 
@@ -28,15 +28,19 @@ Python investigation, planning, and agent assistance, November 5, 2026.
 - Operator-only task approval/revocation bound to reviewed plan/spec hashes, append-only decision
   generations, atomic task/event writes, and migration 4 preserving existing records.
 - Read-only CLI/MCP assignment preparation checks with dependency, freshness, feasibility, decision,
-  and approval blockers. Planning now exposes 15 tools; default discovery remains six tools.
+  and approval blockers. Planning now exposes 16 tools; default discovery remains six tools.
+
+- Opt-in fenced assignment reservations with atomic claims, bounded TTLs, client heartbeats,
+  effective expiry, authenticated bearer renewal/release, and operator/lifecycle invalidation.
+- Migration 5 preserving existing state; planning exposes 16 tools, coordination 19, default six.
 
 ## Next
 
 1. Extend the curated evaluation set and measure results against text-search investigation.
 2. Validate a selected desktop MCP host; the SDK-client stdio path is already tested.
 3. Evaluate model/human-authored plan quality against representative feature requests.
-4. Add atomic ownership leases and runtime/action policy enforcement before managed bee execution.
-   Operator approval for assignment preparation is implemented; execution/release approval is not.
+4. Select an execution runtime and enforce capabilities, action policy, and cancellation supervision.
+   Assignment approval and reservation leases are implemented; execution/release approval is not.
 
 The foundation implements parts of WB-001 through WB-010 in the plan. It is not a completed
 milestone-1 or v0.1 release: no general imports/non-call-reference API, broader resolver evaluation,
@@ -61,3 +65,6 @@ GitHub Actions tests Python 3.12/3.13/3.14; consult the current PR's checks for 
 
 Approval tests cover concurrent decisions, stale replay/revocation, hash mismatches, source freshness,
 operator CLI, real current/legacy MCP access, lifecycle bypass, migration, and atomic rollback.
+
+Lease tests cover competing claims, expiry without writes, stale credentials, heartbeats, context
+changes, atomic invalidation, rollback, migration, CLI, real MCP clients, and capability opt-in.

@@ -4,6 +4,7 @@ import sqlite3
 from typing import Literal
 
 from worker_bees.approval_models import ApprovalReceipt, ApprovalRequest, TaskApproval, TaskPolicy
+from worker_bees.lease_state import invalidate_lease, lease_view, load_lease, now_ms
 from worker_bees.models import Index, PolicyDecision, Task
 from worker_bees.planning_models import StoredPlan
 from worker_bees.storage import Store
@@ -15,8 +16,8 @@ WARNINGS = [
     "unspecified replacement specification. The operator must confirm the current specification.",
     "Local database/CLI access is the operator boundary; actor labels are not authenticated "
     "identity.",
-    "This is a point-in-time policy report, not a claim or lease. Recheck when assignment "
-    "is implemented.",
+    "This report does not reserve ownership. Use an explicitly enabled atomic claim "
+    "for assignment.",
 ]
 
 
@@ -59,6 +60,8 @@ class Approvals:
         tasks: dict[str, Task],
         approval: TaskApproval | None,
         specification_sha256: str | None,
+        *,
+        include_reservation: bool = True,
     ) -> TaskPolicy:
         proposal = plan.proposal
         task = tasks[f"{proposal.id}:{task_id}"]
@@ -113,6 +116,16 @@ class Approvals:
             blockers.append("operator_approval_required")
         if valid_approval and task.status != "ready":
             blockers.append("task_not_ready")
+        reservation = None
+        if include_reservation:
+            record = load_lease(connection, task.id)
+            if record is not None:
+                reasons = list(blockers)
+                if record.approval_generation != (approval.generation if approval else 0):
+                    reasons.append("approval_generation_changed")
+                reservation = lease_view(proposal.id, task_id, record, now_ms(), reasons)
+                if reservation.state == "active":
+                    blockers.append("task_reserved")
         decision_value: Literal["allow", "require_approval", "deny"] = (
             "deny"
             if any(reason != "operator_approval_required" for reason in blockers)
@@ -138,6 +151,7 @@ class Approvals:
             ),
             blockers=blockers,
             warnings=WARNINGS,
+            reservation=reservation,
         )
 
     def check(
@@ -192,6 +206,8 @@ class Approvals:
                 reason=request.reason,
             )
             updated = Task.model_validate(task.model_dump() | {"status": status})
+            if request.action == "revoke" and invalidate_lease(connection, task.id):
+                self.store.event(connection, task.id, "lease_invalidated", "local_operator")
             connection.execute(
                 "INSERT INTO task_approvals(task_id, generation, payload) VALUES (?, ?, ?)",
                 (task.id, approval.generation, approval.model_dump_json()),

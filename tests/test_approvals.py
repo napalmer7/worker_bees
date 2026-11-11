@@ -252,6 +252,7 @@ def test_unresolved_decisions_cannot_be_silently_approved(proposed):
 def test_v3_upgrade_preserves_plans_tasks_and_requires_explicit_init(approved_plan):
     _, database, index, raw, _ = approved_plan
     with sqlite3.connect(database) as connection:
+        connection.execute("DROP TABLE task_leases")
         connection.execute("DROP TABLE task_approvals")
         connection.execute("PRAGMA user_version = 3")
     with pytest.raises(ValueError, match="migration"):
@@ -298,7 +299,7 @@ def test_mcp_policy_observes_operator_revocation_but_cannot_approve(approved_pla
     async def scenario():
         async with Client(parameters, mode=mode, read_timeout_seconds=10) as client:
             tools = (await client.list_tools()).tools
-            assert len(tools) == 15
+            assert len(tools) == 16
             names = {tool.name for tool in tools}
             assert not {"decide_task", "approve_task", "revoke_task"}.intersection(names)
             assert next(

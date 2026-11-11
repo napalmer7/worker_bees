@@ -53,3 +53,16 @@ def test_planning_spot_check_keeps_an_editable_plan(tmp_path):
     assert "unowned draft tasks" in result.stdout
     assert "Cyclic task dependencies" in result.stdout
     assert (workspace / "feature-plan.json").is_file()
+
+
+def test_coordination_spot_check_exercises_real_lease_tools():
+    project = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, str(project / "scripts" / "spot_check.py"), "--coordination"],
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "claims, heartbeats, and releases" in result.stdout
+    assert "All spot checks passed." in result.stdout

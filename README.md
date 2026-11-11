@@ -72,7 +72,7 @@ criteria, and validation needs. Feasibility is a human/model-supplied proposal, 
 verified verdict. Draft submission never approves or executes work. The default MCP server stays
 read-only; `--enable-planning` adds planning and assistance tools, including draft writes.
 See [the planning guide](docs/planning.md).
-For an existing database, run `worker-bees init --db PATH` once to apply schema migrations through version 4.
+For an existing database, run `worker-bees init --db PATH` once to apply schema migrations through version 5.
 
 ## Agent guidance and acceptance review
 
@@ -97,6 +97,15 @@ task for assignment; execution remains disabled. See [task approval](docs/task-a
 ```bash
 uv run worker-bees check-task-policy PLAN_ID TASK_ID --db .worker-bees/state.db
 uv run worker-bees decide-task approval.json --db .worker-bees/state.db
+```
+
+Approved tasks can also be reserved with fenced, expiring leases. Start MCP with both
+`--enable-planning --enable-coordination` to expose claim, heartbeat, and release tools, or use
+the equivalent CLI commands. Task execution remains a separate future capability.
+See [assignment leases](docs/task-leases.md).
+
+```bash
+uv run python scripts/spot_check.py --coordination
 ```
 
 Development checks:

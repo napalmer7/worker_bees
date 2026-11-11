@@ -34,7 +34,7 @@ uv run worker-bees check-task-policy negative-price-validation T1 --db .worker-b
 
 ## Review and record a real decision
 
-For an existing database, explicitly apply migration 4 first:
+For an existing database, explicitly apply migrations through version 5 first:
 
 ```bash
 uv run worker-bees init --db .worker-bees/state.db
@@ -106,8 +106,8 @@ pinned to a different snapshot cannot retrieve it. New/replacement plans do not 
 Both CLI and MCP policy reports are read-only and read one consistent SQLite transaction. A CLI
 exit code of 0 means the report was computed; inspect policy.decision and blockers. Even allow is
 limited to prepare_task_assignment, and every report has execution_available: false. It is a
-point-in-time result, not an ownership claim. A future claim operation must recheck policy and
-acquire a fenced lease in the same write transaction.
+point-in-time result, not an ownership claim. The opt-in [lease claim operation](task-leases.md) rechecks policy and reserves assignment
+in the same write transaction. Active reservations add a task_reserved blocker to policy reports.
 
 ## Persistence and next gates
 
@@ -117,7 +117,7 @@ record, task state update, and corresponding event commit or roll back together.
 payloads remain in task_approvals ordered by generation; policy reports expose the latest one.
 No task/snapshot/plan payload rewrite is needed for the migration.
 
-The legacy transition API still cannot promote planned tasks or enter execution. Runtime selection,
-atomic ownership leases, heartbeats, cancellation, evidence-backed completion, action-specific
+The legacy transition API still cannot promote planned tasks or enter execution. Fenced reservation leases and client-driven heartbeats are available separately. Runtime selection,
+cancellation supervision, evidence-backed completion, action-specific
 execution policies, and integration/release approval remain future work. This gate supplies a
 reviewable consent boundary before those capabilities are added.

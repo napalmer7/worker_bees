@@ -114,3 +114,10 @@ The --planning spot check also simulates operator approval/revocation in its dis
 It checks that dependencies block assignment and that execution remains disabled, then restores T1
 to draft. A retained demo includes approval-request.json with the latest generation for another
 reviewed decision. See [task approval](task-approval.md) for the commands and authority boundary.
+
+## Assignment lease spot check
+
+Run `uv run python scripts/spot_check.py --coordination` for the full temporary sample, including
+real MCP claim, rejected duplicate claim, heartbeat, and release. Add --keep NEW_DIRECTORY to retain
+its state. Tokens are kept in memory, and the sample application is not modified. See
+[assignment leases](task-leases.md) for the model, opt-in flags, and operator boundary.
