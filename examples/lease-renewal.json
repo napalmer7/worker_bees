@@ -1,0 +1,10 @@
+{
+  "plan_id": "negative-price-validation",
+  "task_id": "T1",
+  "owner": "bee-session-001",
+  "lease_id": "REPLACE_WITH_LEASE_ID",
+  "generation": 1,
+  "token": "REPLACE_WITH_PRIVATE_LEASE_TOKEN",
+  "specification_sha256": "REPLACE_WITH_CURRENT_REVIEWED_TEXT_SHA256",
+  "ttl_seconds": 120
+}

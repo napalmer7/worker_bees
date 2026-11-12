@@ -6,7 +6,7 @@ the server does not call a model or independently execute or verify test artifac
 
 ## Discover the workflows
 
-Start the server with --enable-planning. It exposes 15 tools and two standard MCP prompts:
+Start the server with --enable-planning. It exposes 16 tools and two standard MCP prompts:
 
 | Interface | Name | Purpose |
 |---|---|---|
@@ -16,6 +16,7 @@ Start the server with --enable-planning. It exposes 15 tools and two standard MC
 | Tool | prepare_specification | Prepare client-extracted text with a hash and source-block IDs |
 | Tool | assess_task | Evaluate the completeness/consistency of reported evidence and reviews |
 | Tool | check_task_policy | Read operator consent and assignment preparation blockers |
+| Tool | get_task_lease | Read effective reservation ownership without bearer credentials |
 
 The new tools are read-only. submit_plan remains the only database write tool. The default
 server, without --enable-planning, retains the six investigation tools and has no planning prompts.
@@ -82,7 +83,7 @@ or proof that all requirements were extracted. An unmapped paragraph may be usef
 The field is optional for existing proposals. With no citations, source mapping is explicitly
 not_supplied and unassessed. Existing immutable plan retries remain idempotent after the additive
 schema field; task progress and historical hashes are preserved. This source-mapping field does
-not require a migration; the separate [task approval](task-approval.md) feature requires schema 4.
+not require a migration; the separate [task approval](task-approval.md) feature requires schema 5 with task reservations.
 
 ## Task satisfaction assistance
 

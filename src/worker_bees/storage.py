@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from worker_bees.lease_state import invalidate_lease
 from worker_bees.models import Event, Index, Snapshot, Task, TaskStatus, Transition
 from worker_bees.planning_models import StoredPlan
 
@@ -24,6 +25,11 @@ MIGRATIONS = (
     ),
     (
         "CREATE TABLE task_approvals (task_id TEXT NOT NULL REFERENCES tasks(id), "
+        "generation INTEGER NOT NULL CHECK (generation > 0), payload TEXT NOT NULL, "
+        "PRIMARY KEY (task_id, generation))",
+    ),
+    (
+        "CREATE TABLE task_leases (task_id TEXT NOT NULL REFERENCES tasks(id), "
         "generation INTEGER NOT NULL CHECK (generation > 0), payload TEXT NOT NULL, "
         "PRIMARY KEY (task_id, generation))",
     ),
@@ -142,6 +148,8 @@ class Store:
                 "UPDATE tasks SET payload = ? WHERE id = ?", (updated.model_dump_json(), task_id)
             )
             self.event(connection, task_id, f"task_{after}")
+            if task.plan_id is not None and invalidate_lease(connection, task_id):
+                self.event(connection, task_id, "lease_invalidated")
         return updated
 
     def events(self) -> list[Event]:

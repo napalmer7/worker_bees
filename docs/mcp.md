@@ -84,8 +84,8 @@ the adapter and rerun the real stdio tests when upgrading it.
 
 ## Optional draft-planning tools
 
-Add `--enable-planning` to enable five planning tools, three read-only assistance tools, and one read-only policy tool:
-get_workflow_guidance, prepare_specification, assess_task, and check_task_policy. Two MCP prompts, plan_feature and
+Add `--enable-planning` to enable five planning tools, three read-only assistance tools, and two read-only policy/reservation tools:
+get_workflow_guidance, prepare_specification, assess_task, check_task_policy, and get_task_lease. Two MCP prompts, plan_feature and
 review_task_satisfaction, provide the corresponding workflows. Only submit_plan writes; it persists unapproved
 drafts and tracked tasks in the selected database. The server cannot modify source, choose another
 snapshot, approve work, or execute proposed procedures. Without that flag, discovery and database
@@ -103,3 +103,11 @@ uv run python scripts/spot_check.py
 This starts the actual server process, discovers its tools, compares MCP results with CLI results,
 and checks explicit errors. See [the spot-check guide](testing.md) for the retained example and
 instructions for investigating your own repository.
+
+## Optional assignment coordination
+
+Add --enable-coordination alongside --enable-planning to expose claim_task, renew_task_lease,
+and release_task_lease (19 total tools). Planning alone exposes get_task_lease read-only.
+Claims enforce operator approval, dependencies, freshness, and generation checks atomically.
+Leases reserve assignment only; no execution or lifecycle completion is enabled. Public reads
+show effective ownership/expiry without credentials. See [assignment leases](task-leases.md).

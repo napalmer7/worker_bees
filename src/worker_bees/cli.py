@@ -16,6 +16,8 @@ from worker_bees.approvals import Approvals
 from worker_bees.assessment import AssessmentRequest
 from worker_bees.assessment import assess_task as assess_report
 from worker_bees.guidance import Workflow, get_guidance
+from worker_bees.lease_models import ClaimRequest, LeaseCredential, RenewRequest
+from worker_bees.leases import Leases
 from worker_bees.planning import MAX_PROPOSAL_BYTES, Planning
 from worker_bees.planning_models import PlanProposal
 from worker_bees.queries import Investigation
@@ -128,12 +130,19 @@ def impact(
 
 
 @app.command()
-def serve(db: DB = DEFAULT_DB, snapshot: SnapshotID = None, enable_planning: bool = False) -> None:
+def serve(
+    db: DB = DEFAULT_DB,
+    snapshot: SnapshotID = None,
+    enable_planning: bool = False,
+    enable_coordination: bool = False,
+) -> None:
     """Serve pinned MCP investigation; opt in to draft planning with --enable-planning."""
     from worker_bees.mcp_server import serve as serve_mcp
 
     with errors():
-        serve_mcp(db, snapshot, enable_planning=enable_planning)
+        serve_mcp(
+            db, snapshot, enable_planning=enable_planning, enable_coordination=enable_coordination
+        )
 
 
 def read_proposal(path: Path) -> PlanProposal:
@@ -271,3 +280,51 @@ def decide_task(
         request = ApprovalRequest.model_validate_json(data)
         planner = planning(db, snapshot, writable=True)
         output(Approvals(planner.store, planner.index).decide(request))
+
+
+def read_lease_request[T: BaseModel](path: Path, contract: type[T]) -> T:
+    with path.open("rb") as source:
+        data = source.read(8193)
+    if len(data) > 8192:
+        raise ValueError("lease request exceeds the 8 KiB input budget")
+    return contract.model_validate_json(data)
+
+
+@app.command()
+def get_task_lease(
+    plan_id: str,
+    task_id: str,
+    db: DB = DEFAULT_DB,
+    snapshot: SnapshotID = None,
+) -> None:
+    """Read effective reservation state, including expiry; never print a bearer token."""
+    with errors():
+        planner = planning(db, snapshot)
+        output(Leases(planner.store, planner.index).get(plan_id, task_id))
+
+
+@app.command()
+def claim_task(request: Path, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Reserve assignment only. Output includes a private bearer token; retain it securely."""
+    with errors():
+        candidate = read_lease_request(request, ClaimRequest)
+        planner = planning(db, snapshot, writable=True)
+        output(Leases(planner.store, planner.index).claim(candidate))
+
+
+@app.command()
+def renew_task_lease(request: Path, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Heartbeat an unexpired reservation; never start a bee or extend execution authority."""
+    with errors():
+        candidate = read_lease_request(request, RenewRequest)
+        planner = planning(db, snapshot, writable=True)
+        output(Leases(planner.store, planner.index).renew(candidate))
+
+
+@app.command()
+def release_task_lease(request: Path, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Release the matching lease even after expiry or context changes; task stays ready."""
+    with errors():
+        candidate = read_lease_request(request, LeaseCredential)
+        planner = planning(db, snapshot, writable=True)
+        output(Leases(planner.store, planner.index).release(candidate))

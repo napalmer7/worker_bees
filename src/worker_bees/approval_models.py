@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field, StringConstraints
 
+from worker_bees.lease_models import LeaseView
 from worker_bees.models import PolicyDecision, Record, Task, new_id, timestamp
 from worker_bees.planning_models import Key, Text
 
@@ -50,6 +51,7 @@ class TaskPolicy(Record):
     blockers: list[str]
     warnings: list[str]
     execution_available: Literal[False] = False
+    reservation: LeaseView | None = None
 
 
 class ApprovalReceipt(Record):

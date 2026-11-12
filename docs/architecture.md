@@ -1,6 +1,6 @@
 # Python foundation decisions
 
-Status: Python investigation, local MCP, planning, and agent assistance, November 5, 2026.
+Status: Python investigation, local MCP, planning, and agent assistance, November 11, 2026.
 
 ## Scope
 
@@ -20,10 +20,12 @@ SQLite is authoritative for snapshots, tasks, and events. A task update and its 
 in the same transaction. Transitions compare the expected prior state under a write lock.
 Task execution/completion transitions are disabled until ownership and evidence gates exist.
 Operator approval is a separate transactional gate that can promote reviewed planned tasks to ready.
-This is not yet an atomic claim/lease system. Frozen Pydantic records reject extra fields and
+An opt-in lease system now reserves assignment under the same write lock as approval checks.
+Tasks remain ready/unowned execution records; the lease effective_owner describes reservations. Frozen Pydantic records reject extra fields and
 coercion. Read-only query commands open SQLite in read-only mode and do not create missing state.
 
 Migrations 1 and 2 establish coordination records and immutable source snapshots respectively.
+Migration 5 adds fenced assignment reservations; public reads derive effective expiry/invalidation.
 Migration 4 adds append-only task approval decisions with per-task generations.
 Migration 3 adds snapshot-scoped plans with foreign-key references to the persisted snapshots.
 Index records are stored as versioned JSON payloads in SQLite for this bounded prototype. Queries
@@ -72,7 +74,7 @@ human decision questions, acceptance criteria, and validation procedures. No mod
 
 The CLI submit-plan command, or an MCP server started with --enable-planning, may persist drafts.
 The default server still has only six read-only investigation tools. Opt-in adds five planning tools,
-three read-only assistance tools, one read-only policy check, and two MCP prompts;
+three read-only assistance tools, two read-only policy/reservation checks, and two MCP prompts;
 submit_plan is the only write. It writes a plan, derived unowned tasks, and events in one transaction.
 Stable plan IDs and a canonical submission hash make identical retries no-ops and reject conflicting
 content. Exclusions, shared contracts, kinds, and complete criteria remain in the immutable proposal.
@@ -118,3 +120,13 @@ Select one execution runtime before adding a supervisor. No model provider is as
 The existing specification documents remain the behavioral contract. Review/release authority
 is not conferred by role names or a task record. The project's license is AGPL-3.0-only;
 see LICENSE and docs/licensing.md. No public package release is introduced by this implementation.
+
+## Assignment reservations
+
+Leases use one append-per-claim generation and a hashed bearer token; claims, renewals, releases,
+and audit events are transactional. Approval revocation and task block/cancel invalidate open
+reservations in the same transaction. Stale credentials cannot update a later generation. Effective
+expiry is computed on reads. Planning-only MCP exposes inspection; a second explicit coordination
+flag enables the three mutation tools. All grants retain execution_available false. Local clock
+assumptions, database restore limits, and future external fencing enforcement are documented in
+task-leases.md. Runtime execution remains unimplemented.

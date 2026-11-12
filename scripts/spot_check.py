@@ -32,6 +32,7 @@ PLANNING_TOOLS = {
     "prepare_specification",
     "assess_task",
     "check_task_policy",
+    "get_task_lease",
 }
 
 
@@ -121,7 +122,7 @@ async def check_planning_mcp(database, snapshot, proposal):
             not retry.is_error and not retry.structured_content["created"],
             "MCP retry should preserve the CLI's existing draft",
         )
-        print("PASS  Opt-in MCP planning discovers fifteen tools and preserves the same draft")
+        print("PASS  Opt-in MCP planning discovers sixteen tools and preserves the same draft")
         prompts = await client.list_prompts()
         require(
             {prompt.name for prompt in prompts.prompts}
@@ -171,7 +172,7 @@ async def check_planning_mcp(database, snapshot, proposal):
         print("PASS  Cyclic task dependencies fail validation and cannot be submitted")
 
 
-def check_planning(database, snapshot, workspace):
+def check_planning(database, snapshot, workspace, coordination=False):
     proposal = json.loads((PROJECT / "examples" / "feature-plan.json").read_text())
     proposal["snapshot_id"] = snapshot
     path = workspace / "feature-plan.json"
@@ -229,10 +230,10 @@ def check_planning(database, snapshot, workspace):
     )
     print("PASS  A changed feature specification flags the stored plan for reassessment")
     asyncio.run(asyncio.wait_for(check_planning_mcp(database, snapshot, proposal), timeout=30))
-    check_approvals(database, workspace, proposal["id"])
+    check_approvals(database, workspace, proposal["id"], coordination=coordination)
 
 
-def check_approvals(database, workspace, plan_id):
+def check_approvals(database, workspace, plan_id, coordination=False):
     policy = cli(database, "check-task-policy", plan_id, "T1")
     require(policy["policy"]["decision"] == "require_approval", "Draft requires operator consent")
     request = {
@@ -250,6 +251,8 @@ def check_approvals(database, workspace, plan_id):
     require(receipt["task"]["status"] == "ready", "Approved task should be ready")
     require(receipt["policy"]["policy"]["decision"] == "allow", "Preparation gates should pass")
     require(receipt["policy"]["execution_available"] is False, "Execution must remain disabled")
+    if coordination:
+        asyncio.run(asyncio.wait_for(check_leases_mcp(database, policy), timeout=30))
     dependent = cli(database, "check-task-policy", plan_id, "T2")
     require(
         any(b.startswith("dependency_incomplete:") for b in dependent["blockers"]),
@@ -273,11 +276,79 @@ def check_approvals(database, workspace, plan_id):
     print("PASS  Simulated operator approval/revocation is audited and never enables execution")
 
 
+async def check_leases_mcp(database, policy):
+    parameters = StdioServerParameters(
+        command=sys.executable,
+        args=[
+            "-m",
+            "worker_bees",
+            "serve",
+            "--db",
+            str(database),
+            "--snapshot",
+            policy["snapshot_id"],
+            "--enable-planning",
+            "--enable-coordination",
+        ],
+    )
+    async with Client(parameters, read_timeout_seconds=10) as client:
+        require(len((await client.list_tools()).tools) == 19, "Expected 19 coordination tools")
+        request = {
+            "plan_id": policy["plan_id"],
+            "task_id": policy["task_id"],
+            "owner": "sample-bee",
+            "submission_sha256": policy["submission_sha256"],
+            "specification_sha256": policy["specification_sha256"],
+            "expected_approval_generation": 1,
+            "expected_lease_generation": 0,
+        }
+        granted = await client.call_tool("claim_task", {"request": request})
+        require(not granted.is_error, "Sample lease claim failed")
+        grant = granted.structured_content
+        require(grant["lease"]["effective_owner"] == "sample-bee", "Lease owner must be visible")
+        require(
+            grant["lease"]["execution_available"] is False, "Claim must not authorize execution"
+        )
+        credentials = {
+            "plan_id": request["plan_id"],
+            "task_id": request["task_id"],
+            "owner": "sample-bee",
+            "lease_id": grant["lease"]["lease_id"],
+            "generation": grant["lease"]["generation"],
+            "token": grant["token"],
+        }
+        replay = await client.call_tool("claim_task", {"request": request})
+        require(replay.is_error, "A claim retry must not create a duplicate reservation")
+        renewed = await client.call_tool(
+            "renew_task_lease",
+            {
+                "request": credentials
+                | {
+                    "specification_sha256": request["specification_sha256"],
+                }
+            },
+        )
+        require(
+            not renewed.is_error and renewed.structured_content["state"] == "active",
+            "Heartbeat failed",
+        )
+        released = await client.call_tool("release_task_lease", {"request": credentials})
+        require(
+            not released.is_error and released.structured_content["state"] == "released",
+            "Release failed",
+        )
+        print(
+            "PASS  Explicit MCP coordination claims, heartbeats, and releases "
+            "without executing code"
+        )
+
+
 def command_text(arguments):
     return subprocess.list2cmdline(arguments) if os.name == "nt" else shlex.join(arguments)
 
 
-def spot_check(workspace, keep=False, planning=False):
+def spot_check(workspace, keep=False, planning=False, coordination=False):
+    planning = planning or coordination
     repository = workspace / "repository"
     shutil.copytree(PROJECT / "tests" / "fixtures" / "python_app", repository)
     (workspace / "empty-hooks").mkdir()
@@ -319,7 +390,7 @@ def spot_check(workspace, keep=False, planning=False):
     print("PASS  Bounded impact query returns the four expected affected symbols")
     asyncio.run(asyncio.wait_for(check_mcp(database, snapshot, symbol), timeout=30))
     if planning:
-        check_planning(database, snapshot, workspace)
+        check_planning(database, snapshot, workspace, coordination=coordination)
     print(f"\nCommit:   {status['snapshot']['commit']}")
     print(f"Snapshot: {snapshot}")
     if not keep:
@@ -347,16 +418,30 @@ def main():
         "--keep", type=Path, help="Keep the demo at this new directory; refuses overwrite"
     )
     parser.add_argument("--planning", action="store_true", help="Also test opt-in feature planning")
+    parser.add_argument(
+        "--coordination",
+        action="store_true",
+        help="Also test approval and opt-in assignment leases on the sample",
+    )
     arguments = parser.parse_args()
     try:
         if arguments.keep:
             workspace = arguments.keep.expanduser().resolve()
             workspace.mkdir(parents=True, exist_ok=False)
             print(f"Demo directory: {workspace}\n")
-            spot_check(workspace, keep=True, planning=arguments.planning)
+            spot_check(
+                workspace,
+                keep=True,
+                planning=arguments.planning,
+                coordination=arguments.coordination,
+            )
         else:
             with tempfile.TemporaryDirectory(prefix="worker-bees-spot-check-") as temporary:
-                spot_check(Path(temporary).resolve(), planning=arguments.planning)
+                spot_check(
+                    Path(temporary).resolve(),
+                    planning=arguments.planning,
+                    coordination=arguments.coordination,
+                )
             print("\nTemporary demo removed. Use --keep NEW_DIRECTORY to inspect it afterward.")
     except (RuntimeError, OSError, subprocess.SubprocessError, TimeoutError) as error:
         print(f"FAIL  {error}", file=sys.stderr)
