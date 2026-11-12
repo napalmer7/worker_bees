@@ -17,6 +17,7 @@ from worker_bees.assessment import assess_task as assess_report
 from worker_bees.guidance import Workflow, WorkflowGuidance, get_guidance, render_prompt
 from worker_bees.lease_models import (
     ClaimRequest,
+    LeaseContext,
     LeaseCredential,
     LeaseGrant,
     LeaseView,
@@ -39,6 +40,7 @@ from worker_bees.queries import Investigation
 from worker_bees.specifications import PreparedSpecification
 from worker_bees.specifications import prepare_specification as prepare_text
 from worker_bees.storage import Store
+from worker_bees.workspaces import TaskBrief, Workspaces
 
 QueryText = Annotated[str, Field(strict=True, min_length=1, max_length=512)]
 SymbolID = Annotated[str, Field(strict=True, min_length=1, max_length=512)]
@@ -184,6 +186,11 @@ def create_server(
         def get_task_lease(plan_id: Key, task_id: Key) -> LeaseView:
             """Read effective reservation ownership/expiry; never disclose bearer credentials."""
             return bounded(lambda: leases.get(plan_id, task_id))
+
+        @server.tool(annotations=READ_ONLY, structured_output=True)
+        def get_task_brief(request: LeaseContext) -> TaskBrief:
+            """Read a scoped brief for a live lease; no workspace writes or execution."""
+            return bounded(lambda: Workspaces(approvals.store, investigation.index).brief(request))
 
         if enable_coordination:
             lease_write_hint = ToolAnnotations(

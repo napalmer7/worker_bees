@@ -387,7 +387,7 @@ def test_coordination_opt_in_real_stdio_flow(reservation, mode):
     async def scenario():
         async with Client(params, mode=mode, read_timeout_seconds=10) as client:
             tools = (await client.list_tools()).tools
-            assert len(tools) == 19
+            assert len(tools) == 20
             assert next(t for t in tools if t.name == "get_task_lease").annotations.read_only_hint
             assert not next(t for t in tools if t.name == "claim_task").annotations.idempotent_hint
             result = await client.call_tool("claim_task", {"request": request.model_dump()})

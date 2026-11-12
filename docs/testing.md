@@ -121,3 +121,10 @@ Run `uv run python scripts/spot_check.py --coordination` for the full temporary 
 real MCP claim, rejected duplicate claim, heartbeat, and release. Add --keep NEW_DIRECTORY to retain
 its state. Tokens are kept in memory, and the sample application is not modified. See
 [assignment leases](task-leases.md) for the model, opt-in flags, and operator boundary.
+
+## Task workspace spot check
+
+Run `uv run python scripts/spot_check.py --workspaces --keep NEW_DIRECTORY` to include an operator
+prepared detached worktree and exported task brief. It leaves task-workspace/checkout, task-brief.json,
+and manifest.json for inspection, with no retained bearer request. No target command or model is
+executed. See [task workspaces](task-workspaces.md) for exact limits and recovery behavior.

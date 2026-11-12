@@ -39,8 +39,8 @@ uv run worker-bees serve --db .worker-bees/state.db --snapshot SNAPSHOT_ID --ena
 | Mode | Tools | Database mutations |
 |---|---|---|
 | Default | 6 investigation tools | None |
-| --enable-planning | 16 investigation/planning/assistance/policy tools, two prompts | Draft submission only |
-| Both flags | 19 tools, two prompts | Draft submission and lease claim/renew/release |
+| --enable-planning | 17 investigation/planning/assistance/policy tools, two prompts | Draft submission only |
+| Both flags | 20 tools, two prompts | Draft submission and lease claim/renew/release |
 
 --enable-coordination requires --enable-planning. Planning alone can inspect reservations with
 get_task_lease but cannot mutate them. Operator approvals remain CLI-only. MCP clients cannot
@@ -149,3 +149,6 @@ Use a stable local clock and do not treat this prototype as a distributed lock s
 The next slice must choose an execution adapter, bind workspaces/capabilities to leases, define
 heartbeat/cancellation supervision, and enforce action-specific policy and evidence-backed lifecycle
 transitions. Approval and reservation continue to have separate authority from execution and release.
+
+A lease holder can now export a scoped task brief; the operator can prepare a detached worktree
+at the original revision. This is preparation only, not a runtime. See [task workspaces](task-workspaces.md).

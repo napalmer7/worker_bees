@@ -108,6 +108,14 @@ See [assignment leases](docs/task-leases.md).
 uv run python scripts/spot_check.py --coordination
 ```
 
+Lease holders can export a task brief through MCP or CLI. An operator can prepare a detached
+worktree at the original revision, with scope and validation instructions alongside it. No agent
+process or validation command runs during preparation. See [task workspaces](docs/task-workspaces.md).
+
+```bash
+uv run python scripts/spot_check.py --workspaces
+```
+
 Development checks:
 
 ```bash

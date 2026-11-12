@@ -1,6 +1,6 @@
 # Implementation status
 
-Python investigation, planning, and agent assistance, November 11, 2026.
+Python investigation, planning, and agent assistance, November 12, 2026.
 
 ## Implemented
 
@@ -28,11 +28,16 @@ Python investigation, planning, and agent assistance, November 11, 2026.
 - Operator-only task approval/revocation bound to reviewed plan/spec hashes, append-only decision
   generations, atomic task/event writes, and migration 4 preserving existing records.
 - Read-only CLI/MCP assignment preparation checks with dependency, freshness, feasibility, decision,
-  and approval blockers. Planning now exposes 16 tools; default discovery remains six tools.
+  and approval blockers. Planning now exposes 17 tools; default discovery remains six tools.
 
 - Opt-in fenced assignment reservations with atomic claims, bounded TTLs, client heartbeats,
   effective expiry, authenticated bearer renewal/release, and operator/lifecycle invalidation.
-- Migration 5 preserving existing state; planning exposes 16 tools, coordination 19, default six.
+- Migration 5 preserving existing state; planning exposes 17 tools, coordination 20, default six.
+
+- Lease-bound read-only task briefs with complete scope/acceptance/validation context, plus
+  operator-only detached worktree preparation from committed regular files.
+- Prepared/failed filesystem manifests, exact revision/tree checks, hook/filter bypass, source
+  preservation, bounded copies, and post-copy lease validation. No new schema migration.
 
 ## Next
 
@@ -68,3 +73,6 @@ operator CLI, real current/legacy MCP access, lifecycle bypass, migration, and a
 
 Lease tests cover competing claims, expiry without writes, stale credentials, heartbeats, context
 changes, atomic invalidation, rollback, migration, CLI, real MCP clients, and capability opt-in.
+
+Workspace tests cover exact bytes/revisions, source preservation, hook/filter suppression, unsafe
+entries/limits, stale credentials/expiry, retained failures, audit rollback, CLI, and real MCP briefs.

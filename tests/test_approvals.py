@@ -299,7 +299,7 @@ def test_mcp_policy_observes_operator_revocation_but_cannot_approve(approved_pla
     async def scenario():
         async with Client(parameters, mode=mode, read_timeout_seconds=10) as client:
             tools = (await client.list_tools()).tools
-            assert len(tools) == 16
+            assert len(tools) == 17
             names = {tool.name for tool in tools}
             assert not {"decide_task", "approve_task", "revoke_task"}.intersection(names)
             assert next(
