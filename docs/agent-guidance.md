@@ -6,7 +6,7 @@ the server does not call a model or independently execute or verify test artifac
 
 ## Discover the workflows
 
-Start the server with --enable-planning. It exposes 16 tools and two standard MCP prompts:
+Start the server with --enable-planning. It exposes 17 tools and two standard MCP prompts:
 
 | Interface | Name | Purpose |
 |---|---|---|
@@ -17,6 +17,7 @@ Start the server with --enable-planning. It exposes 16 tools and two standard MC
 | Tool | assess_task | Evaluate the completeness/consistency of reported evidence and reviews |
 | Tool | check_task_policy | Read operator consent and assignment preparation blockers |
 | Tool | get_task_lease | Read effective reservation ownership without bearer credentials |
+| Tool | get_task_brief | Export scope, acceptance, and validation needs for a live lease |
 
 The new tools are read-only. submit_plan remains the only database write tool. The default
 server, without --enable-planning, retains the six investigation tools and has no planning prompts.

@@ -1,6 +1,6 @@
 # Python foundation decisions
 
-Status: Python investigation, local MCP, planning, and agent assistance, November 11, 2026.
+Status: Python investigation, local MCP, planning, and agent assistance, November 12, 2026.
 
 ## Scope
 
@@ -74,7 +74,7 @@ human decision questions, acceptance criteria, and validation procedures. No mod
 
 The CLI submit-plan command, or an MCP server started with --enable-planning, may persist drafts.
 The default server still has only six read-only investigation tools. Opt-in adds five planning tools,
-three read-only assistance tools, two read-only policy/reservation checks, and two MCP prompts;
+three read-only assistance tools, three read-only policy/reservation/brief checks, and two MCP prompts;
 submit_plan is the only write. It writes a plan, derived unowned tasks, and events in one transaction.
 Stable plan IDs and a canonical submission hash make identical retries no-ops and reject conflicting
 content. Exclusions, shared contracts, kinds, and complete criteria remain in the immutable proposal.
@@ -130,3 +130,14 @@ expiry is computed on reads. Planning-only MCP exposes inspection; a second expl
 flag enables the three mutation tools. All grants retain execution_available false. Local clock
 assumptions, database restore limits, and future external fencing enforcement are documented in
 task-leases.md. Runtime execution remains unimplemented.
+
+## Workspace preparation
+
+A live lease can export a complete revision-bound task brief. The operator-only preparation CLI
+registers a detached no-checkout worktree, fills its private index, and writes bounded regular
+committed blobs without invoking checkout hooks/filters. Source edits and branch refs are preserved.
+Coordination is checked under a write lock before/after preparation; expiry does not renew.
+Filesystem attempts have explicit preparing/prepared/failed manifests and are retained on failure.
+Files and SQLite are not one atomic transaction; a manifest is never runtime authority. Shared
+Git metadata/configuration and prototype limits are documented in task-workspaces.md. No migration
+beyond schema 5, execution adapter, or agent provider is added.

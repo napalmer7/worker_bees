@@ -31,8 +31,11 @@ class LeaseCredential(Record):
     token: Hash = Field(repr=False)
 
 
-class RenewRequest(LeaseCredential):
+class LeaseContext(LeaseCredential):
     specification_sha256: Hash
+
+
+class RenewRequest(LeaseContext):
     ttl_seconds: TTL = 120
 
 

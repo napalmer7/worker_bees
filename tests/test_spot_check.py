@@ -66,3 +66,28 @@ def test_coordination_spot_check_exercises_real_lease_tools():
     assert result.returncode == 0, result.stdout + result.stderr
     assert "claims, heartbeats, and releases" in result.stdout
     assert "All spot checks passed." in result.stdout
+
+
+def test_workspace_spot_check_keeps_a_prepared_worktree_and_brief(tmp_path):
+    import json
+
+    project = Path(__file__).resolve().parents[1]
+    workspace = tmp_path / "workspace demo"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(project / "scripts" / "spot_check.py"),
+            "--workspaces",
+            "--keep",
+            str(workspace),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "detached workspace and lease-bound task brief" in result.stdout
+    manifest = json.loads((workspace / "task-workspace" / "manifest.json").read_text())
+    assert manifest["status"] == "prepared" and not manifest["execution_available"]
+    assert (workspace / "task-workspace" / "checkout" / "shop" / "pricing.py").is_file()
+    assert (workspace / "task-workspace" / "task-brief.json").is_file()

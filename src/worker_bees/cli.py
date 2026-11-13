@@ -16,13 +16,14 @@ from worker_bees.approvals import Approvals
 from worker_bees.assessment import AssessmentRequest
 from worker_bees.assessment import assess_task as assess_report
 from worker_bees.guidance import Workflow, get_guidance
-from worker_bees.lease_models import ClaimRequest, LeaseCredential, RenewRequest
+from worker_bees.lease_models import ClaimRequest, LeaseContext, LeaseCredential, RenewRequest
 from worker_bees.leases import Leases
 from worker_bees.planning import MAX_PROPOSAL_BYTES, Planning
 from worker_bees.planning_models import PlanProposal
 from worker_bees.queries import Investigation
 from worker_bees.specifications import read_specification
 from worker_bees.storage import Store
+from worker_bees.workspaces import Workspaces
 
 app = typer.Typer(no_args_is_help=True, help="Investigate committed Python code with evidence.")
 DB = Annotated[Path, typer.Option("--db", help="Local state database.")]
@@ -328,3 +329,26 @@ def release_task_lease(request: Path, db: DB = DEFAULT_DB, snapshot: SnapshotID 
         candidate = read_lease_request(request, LeaseCredential)
         planner = planning(db, snapshot, writable=True)
         output(Leases(planner.store, planner.index).release(candidate))
+
+
+@app.command()
+def get_task_brief(request: Path, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Export a lease-bound task brief without writes or bearer-token disclosure."""
+    with errors():
+        candidate = read_lease_request(request, LeaseContext)
+        planner = planning(db, snapshot)
+        output(Workspaces(planner.store, planner.index).brief(candidate))
+
+
+@app.command()
+def prepare_workspace(
+    request: Path,
+    destination: Path,
+    db: DB = DEFAULT_DB,
+    snapshot: SnapshotID = None,
+) -> None:
+    """Operator-only detached worktree and brief preparation; never execute target code."""
+    with errors():
+        candidate = read_lease_request(request, LeaseContext)
+        planner = planning(db, snapshot, writable=True)
+        output(Workspaces(planner.store, planner.index).prepare(candidate, destination))
