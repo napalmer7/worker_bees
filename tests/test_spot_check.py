@@ -91,3 +91,30 @@ def test_workspace_spot_check_keeps_a_prepared_worktree_and_brief(tmp_path):
     assert manifest["status"] == "prepared" and not manifest["execution_available"]
     assert (workspace / "task-workspace" / "checkout" / "shop" / "pricing.py").is_file()
     assert (workspace / "task-workspace" / "task-brief.json").is_file()
+
+
+def test_worker_spot_check_runs_deterministic_profile_and_retains_logs(tmp_path):
+    import json
+
+    project = Path(__file__).resolve().parents[1]
+    workspace = tmp_path / "worker demo"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(project / "scripts" / "spot_check.py"),
+            "--workers",
+            "--keep",
+            str(workspace),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Deterministic operator worker exits without completing the task" in result.stdout
+    runs = list((workspace / "task-workspace" / "runs").iterdir())
+    assert len(runs) == 1
+    assert (runs[0] / "stdout.log").read_text().strip() == "Demo task: T1"
+    envelope = json.loads((runs[0] / "input.json").read_text())
+    assert envelope["protocol_version"] == 1
+    assert "token" not in envelope

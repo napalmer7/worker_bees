@@ -6,7 +6,7 @@ the server does not call a model or independently execute or verify test artifac
 
 ## Discover the workflows
 
-Start the server with --enable-planning. It exposes 17 tools and two standard MCP prompts:
+Start the server with --enable-planning. It exposes 18 tools and two standard MCP prompts:
 
 | Interface | Name | Purpose |
 |---|---|---|
@@ -84,7 +84,7 @@ or proof that all requirements were extracted. An unmapped paragraph may be usef
 The field is optional for existing proposals. With no citations, source mapping is explicitly
 not_supplied and unassessed. Existing immutable plan retries remain idempotent after the additive
 schema field; task progress and historical hashes are preserved. This source-mapping field does
-not require a migration; the separate [task approval](task-approval.md) feature requires schema 5 with task reservations.
+not require a migration; the separate [task approval](task-approval.md) feature uses its existing records; current worker execution additionally requires schema 6.
 
 ## Task satisfaction assistance
 

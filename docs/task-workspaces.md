@@ -20,8 +20,8 @@ temporary request file; they are not printed or retained in the demo. The fixtur
 unchanged. At the end, the sample lease is released and approval revoked. Its prepared manifest is
 a historical preparation record, not current ownership or permission to use the checkout.
 
-This feature adds no database migration beyond lease schema 5. Existing older databases still need
-worker-bees init --db PATH before use.
+Workspace preparation retains its existing payloads. The local worker runtime adds schema 6;
+run worker-bees init --db PATH to upgrade existing databases before use.
 
 ## Export a task brief
 
@@ -49,7 +49,7 @@ uv run worker-bees get-task-brief context.json --db .worker-bees/state.db --snap
 
 Equivalent MCP: get_task_brief with the nested request object, available with --enable-planning.
 It is read-only and requires a live lease even when the server has no coordination mutation tools.
-Planning now exposes 17 tools and two prompts; adding --enable-coordination exposes 20 tools.
+Planning now exposes 18 tools and two prompts; adding --enable-coordination exposes 21 tools.
 The default six investigation tools and their permissions are unchanged. There is no MCP
 prepare_workspace tool and no document/source-path argument on the brief tool.
 
@@ -128,3 +128,6 @@ provide independent heartbeat/cancellation supervision, and enforce current fenc
 policy before protected effects. It must not infer execution permission from a ready task, exported
 brief, prepared manifest, or prior allow report. Validation, acceptance, integration, and release
 still require their own gates.
+
+The first operator-configured foreground subprocess bridge is now available separately. Workspace
+preparation still grants no execution authority. See [local workers](local-workers.md).

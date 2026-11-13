@@ -6,7 +6,15 @@ from pathlib import Path
 import pytest
 
 from worker_bees.analysis import build_index
+from worker_bees.approval_models import ApprovalRequest
+from worker_bees.approvals import Approvals
+from worker_bees.lease_models import ClaimRequest, LeaseContext
+from worker_bees.lease_state import now_ms
+from worker_bees.leases import Leases
+from worker_bees.planning import Planning
+from worker_bees.planning_models import PlanProposal
 from worker_bees.storage import Store
+from worker_bees.workspaces import Workspaces
 
 
 def git(root: Path, *args: str) -> str:
@@ -67,3 +75,66 @@ def proposed(tmp_path, make_repo):
     raw = json.loads((Path(__file__).parents[1] / "examples" / "feature-plan.json").read_text())
     raw["snapshot_id"] = index.snapshot.id
     return root, database, index, raw
+
+
+@pytest.fixture
+def assignment(proposed):
+    root, database, index, raw = proposed
+
+    def setup(extra=None):
+        if extra:
+            for name, content in extra.items():
+                (root / name).write_bytes(content)
+            git(root, "add", "--all")
+            git(root, "commit", "-m", "workspace fixture")
+        selected = build_index(root) if extra else index
+        store = Store(database, writable=True)
+        if extra:
+            store.save_index(selected)
+        raw["snapshot_id"] = selected.snapshot.id
+        planner = Planning(store, selected)
+        planner.submit(PlanProposal.model_validate(raw), actor="test")
+        plan = planner.get(raw["id"]).plan
+        approval = ApprovalRequest(
+            plan_id=raw["id"],
+            task_id="T1",
+            submission_sha256=plan.submission_sha256,
+            specification_sha256=plan.specification_sha256,
+            expected_generation=0,
+            action="approve",
+            reason="Reviewed workspace preparation scope.",
+        )
+        Approvals(store, selected).decide(approval)
+        clock = [now_ms()]
+        leases = Leases(store, selected, clock=lambda: clock[0])
+        claim = leases.claim(
+            ClaimRequest(
+                plan_id=raw["id"],
+                task_id="T1",
+                owner="bee-one",
+                submission_sha256=plan.submission_sha256,
+                specification_sha256=plan.specification_sha256,
+                expected_approval_generation=1,
+                expected_lease_generation=0,
+            )
+        )
+        request = LeaseContext(
+            plan_id=raw["id"],
+            task_id="T1",
+            owner="bee-one",
+            lease_id=claim.lease.lease_id,
+            generation=claim.lease.generation,
+            token=claim.token,
+            specification_sha256=plan.specification_sha256,
+        )
+        return (
+            root,
+            database,
+            selected,
+            Workspaces(store, selected, clock=lambda: clock[0]),
+            request,
+            approval,
+            clock,
+        )
+
+    return setup

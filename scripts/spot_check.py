@@ -34,6 +34,7 @@ PLANNING_TOOLS = {
     "check_task_policy",
     "get_task_lease",
     "get_task_brief",
+    "get_worker_run",
 }
 
 
@@ -123,7 +124,7 @@ async def check_planning_mcp(database, snapshot, proposal):
             not retry.is_error and not retry.structured_content["created"],
             "MCP retry should preserve the CLI's existing draft",
         )
-        print("PASS  Opt-in MCP planning discovers seventeen tools and preserves the same draft")
+        print("PASS  Opt-in MCP planning discovers eighteen tools and preserves the same draft")
         prompts = await client.list_prompts()
         require(
             {prompt.name for prompt in prompts.prompts}
@@ -173,7 +174,9 @@ async def check_planning_mcp(database, snapshot, proposal):
         print("PASS  Cyclic task dependencies fail validation and cannot be submitted")
 
 
-def check_planning(database, snapshot, workspace, coordination=False, workspaces=False):
+def check_planning(
+    database, snapshot, workspace, coordination=False, workspaces=False, workers=False
+):
     proposal = json.loads((PROJECT / "examples" / "feature-plan.json").read_text())
     proposal["snapshot_id"] = snapshot
     path = workspace / "feature-plan.json"
@@ -232,11 +235,18 @@ def check_planning(database, snapshot, workspace, coordination=False, workspaces
     print("PASS  A changed feature specification flags the stored plan for reassessment")
     asyncio.run(asyncio.wait_for(check_planning_mcp(database, snapshot, proposal), timeout=30))
     check_approvals(
-        database, workspace, proposal["id"], coordination=coordination, workspaces=workspaces
+        database,
+        workspace,
+        proposal["id"],
+        coordination=coordination,
+        workspaces=workspaces,
+        workers=workers,
     )
 
 
-def check_approvals(database, workspace, plan_id, coordination=False, workspaces=False):
+def check_approvals(
+    database, workspace, plan_id, coordination=False, workspaces=False, workers=False
+):
     policy = cli(database, "check-task-policy", plan_id, "T1")
     require(policy["policy"]["decision"] == "require_approval", "Draft requires operator consent")
     request = {
@@ -257,7 +267,10 @@ def check_approvals(database, workspace, plan_id, coordination=False, workspaces
     if coordination:
         asyncio.run(
             asyncio.wait_for(
-                check_leases_mcp(database, policy, workspace if workspaces else None), timeout=60
+                check_leases_mcp(
+                    database, policy, workspace if workspaces else None, workers=workers
+                ),
+                timeout=60,
             )
         )
     dependent = cli(database, "check-task-policy", plan_id, "T2")
@@ -283,7 +296,7 @@ def check_approvals(database, workspace, plan_id, coordination=False, workspaces
     print("PASS  Simulated operator approval/revocation is audited and never enables execution")
 
 
-async def check_leases_mcp(database, policy, workspace=None):
+async def check_leases_mcp(database, policy, workspace=None, workers=False):
     parameters = StdioServerParameters(
         command=sys.executable,
         args=[
@@ -299,7 +312,7 @@ async def check_leases_mcp(database, policy, workspace=None):
         ],
     )
     async with Client(parameters, read_timeout_seconds=10) as client:
-        require(len((await client.list_tools()).tools) == 20, "Expected 20 coordination tools")
+        require(len((await client.list_tools()).tools) == 21, "Expected 21 coordination tools")
         request = {
             "plan_id": policy["plan_id"],
             "task_id": policy["task_id"],
@@ -357,6 +370,40 @@ async def check_leases_mcp(database, policy, workspace=None):
                     str(context_file),
                     str(workspace / "task-workspace"),
                 )
+                if workers:
+                    profile = workspace / "demo-worker-profile.json"
+                    profile.write_text(
+                        json.dumps(
+                            {
+                                "id": "deterministic-demo",
+                                "argv": [
+                                    sys.executable,
+                                    "-c",
+                                    "import json,sys; x=json.load(sys.stdin); "
+                                    "print('Demo task:', x['brief']['task']['id'])",
+                                ],
+                                "timeout_seconds": 10,
+                            }
+                        )
+                    )
+                    run = cli(
+                        database,
+                        "run-worker",
+                        str(context_file),
+                        str(workspace / "task-workspace"),
+                        str(profile),
+                    )
+                    require(
+                        run["status"] == "exited" and run["exit_code"] == 0,
+                        "Deterministic demo worker must exit successfully",
+                    )
+                    require(
+                        run["acceptance_verified"] is False and run["task_status_changed"] is False,
+                        "Process success must not establish task satisfaction",
+                    )
+                    inspected = await client.call_tool("get_worker_run", {"run_id": run["id"]})
+                    require(not inspected.is_error, "MCP worker inspection failed")
+                    print("PASS  Deterministic operator worker exits without completing the task")
             require(manifest["status"] == "prepared", "Sample workspace must be prepared")
             require(
                 manifest["execution_available"] is False, "Workspace must not authorize execution"
@@ -377,7 +424,10 @@ def command_text(arguments):
     return subprocess.list2cmdline(arguments) if os.name == "nt" else shlex.join(arguments)
 
 
-def spot_check(workspace, keep=False, planning=False, coordination=False, workspaces=False):
+def spot_check(
+    workspace, keep=False, planning=False, coordination=False, workspaces=False, workers=False
+):
+    workspaces = workspaces or workers
     coordination = coordination or workspaces
     planning = planning or coordination
     repository = workspace / "repository"
@@ -422,7 +472,12 @@ def spot_check(workspace, keep=False, planning=False, coordination=False, worksp
     asyncio.run(asyncio.wait_for(check_mcp(database, snapshot, symbol), timeout=30))
     if planning:
         check_planning(
-            database, snapshot, workspace, coordination=coordination, workspaces=workspaces
+            database,
+            snapshot,
+            workspace,
+            coordination=coordination,
+            workspaces=workspaces,
+            workers=workers,
         )
     print(f"\nCommit:   {status['snapshot']['commit']}")
     print(f"Snapshot: {snapshot}")
@@ -461,6 +516,11 @@ def main():
         action="store_true",
         help="Also prepare a detached task worktree and brief in the sample",
     )
+    parser.add_argument(
+        "--workers",
+        action="store_true",
+        help="Also run a deterministic operator-configured demo worker",
+    )
     arguments = parser.parse_args()
     try:
         if arguments.keep:
@@ -473,6 +533,7 @@ def main():
                 planning=arguments.planning,
                 coordination=arguments.coordination,
                 workspaces=arguments.workspaces,
+                workers=arguments.workers,
             )
         else:
             with tempfile.TemporaryDirectory(prefix="worker-bees-spot-check-") as temporary:
@@ -481,6 +542,7 @@ def main():
                     planning=arguments.planning,
                     coordination=arguments.coordination,
                     workspaces=arguments.workspaces,
+                    workers=arguments.workers,
                 )
             print("\nTemporary demo removed. Use --keep NEW_DIRECTORY to inspect it afterward.")
     except (RuntimeError, OSError, subprocess.SubprocessError, TimeoutError) as error:

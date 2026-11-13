@@ -33,6 +33,12 @@ MIGRATIONS = (
         "generation INTEGER NOT NULL CHECK (generation > 0), payload TEXT NOT NULL, "
         "PRIMARY KEY (task_id, generation))",
     ),
+    (
+        "CREATE TABLE worker_runs (id TEXT PRIMARY KEY, "
+        "task_id TEXT NOT NULL REFERENCES tasks(id), "
+        "active INTEGER NOT NULL CHECK (active IN (0, 1)), payload TEXT NOT NULL)",
+        "CREATE UNIQUE INDEX worker_runs_active_task ON worker_runs(task_id) WHERE active = 1",
+    ),
 )
 
 

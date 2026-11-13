@@ -84,8 +84,8 @@ the adapter and rerun the real stdio tests when upgrading it.
 
 ## Optional draft-planning tools
 
-Add `--enable-planning` to enable five planning tools, three read-only assistance tools, and three read-only policy/reservation/brief tools:
-get_workflow_guidance, prepare_specification, assess_task, check_task_policy, get_task_lease, and get_task_brief. Two MCP prompts, plan_feature and
+Add `--enable-planning` to enable five planning tools, three read-only assistance tools, and four read-only policy/reservation/brief/run tools:
+get_workflow_guidance, prepare_specification, assess_task, check_task_policy, get_task_lease, get_task_brief, and get_worker_run. Two MCP prompts, plan_feature and
 review_task_satisfaction, provide the corresponding workflows. Only submit_plan writes; it persists unapproved
 drafts and tracked tasks in the selected database. The server cannot modify source, choose another
 snapshot, approve work, or execute proposed procedures. Without that flag, discovery and database
@@ -107,7 +107,7 @@ instructions for investigating your own repository.
 ## Optional assignment coordination
 
 Add --enable-coordination alongside --enable-planning to expose claim_task, renew_task_lease,
-and release_task_lease (20 total tools). Planning alone exposes get_task_lease read-only.
+and release_task_lease (21 total tools). Planning alone exposes get_task_lease read-only.
 Claims enforce operator approval, dependencies, freshness, and generation checks atomically.
 Leases reserve assignment only; no execution or lifecycle completion is enabled. Public reads
 show effective ownership/expiry without credentials. See [assignment leases](task-leases.md).
@@ -115,3 +115,7 @@ show effective ownership/expiry without credentials. See [assignment leases](tas
 Planning also exposes get_task_brief for an authenticated active lease context. It exports scope,
 acceptance criteria, validation needs, and revision/lease bindings without credentials or writes.
 Filesystem preparation is operator-CLI-only. See [task workspaces](task-workspaces.md).
+
+get_worker_run is read-only and reports process outcomes and stale supervision state. It does not
+verify acceptance. Starting/cancelling operator-configured local workers remains CLI-only; no MCP
+execution tool is added. See [local workers](local-workers.md).

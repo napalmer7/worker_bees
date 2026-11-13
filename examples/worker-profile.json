@@ -1,0 +1,10 @@
+{
+  "id": "python-adapter",
+  "argv": ["/absolute/path/to/python", "/absolute/path/to/operator-adapter.py"],
+  "inherit_environment": [],
+  "timeout_seconds": 300,
+  "heartbeat_seconds": 10,
+  "lease_ttl_seconds": 120,
+  "terminate_grace_seconds": 2,
+  "max_output_bytes": 65536
+}

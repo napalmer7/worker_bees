@@ -1,10 +1,13 @@
 """Local CLI. JSON output is suitable for scripts and future adapter comparisons."""
 
+import signal
 import sqlite3
 import subprocess
+import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from types import FrameType
 from typing import Annotated, cast
 
 import typer
@@ -23,6 +26,7 @@ from worker_bees.planning_models import PlanProposal
 from worker_bees.queries import Investigation
 from worker_bees.specifications import read_specification
 from worker_bees.storage import Store
+from worker_bees.workers import Workers
 from worker_bees.workspaces import Workspaces
 
 app = typer.Typer(no_args_is_help=True, help="Investigate committed Python code with evidence.")
@@ -352,3 +356,65 @@ def prepare_workspace(
         candidate = read_lease_request(request, LeaseContext)
         planner = planning(db, snapshot, writable=True)
         output(Workspaces(planner.store, planner.index).prepare(candidate, destination))
+
+
+@app.command()
+def run_worker(
+    request: Path,
+    workspace: Path,
+    profile: Path,
+    db: DB = DEFAULT_DB,
+    snapshot: SnapshotID = None,
+) -> None:
+    """Operator authorization to run a configured local worker under foreground supervision."""
+    with errors():
+        candidate = read_lease_request(request, LeaseContext)
+        planner = planning(db, snapshot, writable=True)
+        with worker_signals():
+            result = Workers(planner.store, planner.index).run(
+                candidate,
+                workspace,
+                profile,
+                on_authorized=lambda run: typer.echo(f"Authorized worker run {run.id}", err=True),
+            )
+        output(result)
+        if result.status != "exited" or result.exit_code != 0:
+            raise typer.Exit(2)
+
+
+@contextmanager
+def worker_signals() -> Iterator[None]:
+    """Let the foreground supervisor handle normal CLI termination as an interruption."""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def interrupt(signum: int, frame: FrameType | None) -> None:
+        raise KeyboardInterrupt
+
+    previous = signal.signal(signal.SIGTERM, interrupt)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
+@app.command()
+def get_worker_run(run_id: str, db: DB = DEFAULT_DB, snapshot: SnapshotID = None) -> None:
+    """Read process outcomes; exit zero is never task acceptance or completion."""
+    with errors():
+        planner = planning(db, snapshot)
+        output(Workers(planner.store, planner.index).inspect(run_id))
+
+
+@app.command()
+def cancel_worker_run(
+    run_id: str,
+    reason: str,
+    db: DB = DEFAULT_DB,
+    snapshot: SnapshotID = None,
+) -> None:
+    """Request a live supervisor to stop its worker; a request is not a stop acknowledgment."""
+    with errors():
+        planner = planning(db, snapshot, writable=True)
+        output(Workers(planner.store, planner.index).cancel(run_id, reason))

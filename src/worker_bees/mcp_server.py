@@ -40,6 +40,8 @@ from worker_bees.queries import Investigation
 from worker_bees.specifications import PreparedSpecification
 from worker_bees.specifications import prepare_specification as prepare_text
 from worker_bees.storage import Store
+from worker_bees.worker_models import WorkerRunInspection
+from worker_bees.workers import Workers
 from worker_bees.workspaces import TaskBrief, Workspaces
 
 QueryText = Annotated[str, Field(strict=True, min_length=1, max_length=512)]
@@ -191,6 +193,11 @@ def create_server(
         def get_task_brief(request: LeaseContext) -> TaskBrief:
             """Read a scoped brief for a live lease; no workspace writes or execution."""
             return bounded(lambda: Workspaces(approvals.store, investigation.index).brief(request))
+
+        @server.tool(annotations=READ_ONLY, structured_output=True)
+        def get_worker_run(run_id: Key) -> WorkerRunInspection:
+            """Read a supervised worker's reported process state; never certify task acceptance."""
+            return bounded(lambda: Workers(approvals.store, investigation.index).inspect(run_id))
 
         if enable_coordination:
             lease_write_hint = ToolAnnotations(
