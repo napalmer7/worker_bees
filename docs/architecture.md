@@ -1,12 +1,13 @@
 # Python foundation decisions
 
-Status: Python investigation, local MCP, planning, and agent assistance, November 12, 2026.
+Status: Python investigation, local MCP, planning, and agent assistance, November 13, 2026.
 
 ## Scope
 
 The Python runtime implements a first investigation slice of the coordination specification.
 It reads committed local Git trees, stores revision-bound source evidence, and exposes bounded
-CLI queries and a read-only MCP adapter. It does not launch agents, approve changes, or merge code.
+CLI queries and a read-only MCP adapter. Default investigation does not launch agents or merge code. A separate operator-only local
+worker supervisor can run an explicitly selected profile without changing task acceptance.
 An opt-in planning layer records unapproved plans and draft tasks without changing repository source.
 
 The single operator invokes CLI commands explicitly. Repository access is selected by the local
@@ -18,7 +19,8 @@ The local database is not a multi-tenant authorization boundary.
 
 SQLite is authoritative for snapshots, tasks, and events. A task update and its event are committed
 in the same transaction. Transitions compare the expected prior state under a write lock.
-Task execution/completion transitions are disabled until ownership and evidence gates exist.
+Task execution/completion status transitions stay disabled; separately authorized local runs have
+their own process-state records and do not complete tasks.
 Operator approval is a separate transactional gate that can promote reviewed planned tasks to ready.
 An opt-in lease system now reserves assignment under the same write lock as approval checks.
 Tasks remain ready/unowned execution records; the lease effective_owner describes reservations. Frozen Pydantic records reject extra fields and
@@ -74,7 +76,7 @@ human decision questions, acceptance criteria, and validation procedures. No mod
 
 The CLI submit-plan command, or an MCP server started with --enable-planning, may persist drafts.
 The default server still has only six read-only investigation tools. Opt-in adds five planning tools,
-three read-only assistance tools, three read-only policy/reservation/brief checks, and two MCP prompts;
+three read-only assistance tools, four read-only policy/reservation/brief/run checks, and two MCP prompts;
 submit_plan is the only write. It writes a plan, derived unowned tasks, and events in one transaction.
 Stable plan IDs and a canonical submission hash make identical retries no-ops and reject conflicting
 content. Exclusions, shared contracts, kinds, and complete criteria remain in the immutable proposal.
@@ -115,7 +117,8 @@ fetches candidate commits, executes validations, persists assessments, or change
 client must obtain authorized source/artifacts and perform semantic/independent review. See
 docs/agent-guidance.md for capabilities, limitations, and examples.
 
-Select one execution runtime before adding a supervisor. No model provider is assumed.
+The first runtime is an operator-configured POSIX subprocess bridge with foreground supervision.
+No model provider is assumed or bundled.
 
 The existing specification documents remain the behavioral contract. Review/release authority
 is not conferred by role names or a task record. The project's license is AGPL-3.0-only;
@@ -129,7 +132,7 @@ reservations in the same transaction. Stale credentials cannot update a later ge
 expiry is computed on reads. Planning-only MCP exposes inspection; a second explicit coordination
 flag enables the three mutation tools. All grants retain execution_available false. Local clock
 assumptions, database restore limits, and future external fencing enforcement are documented in
-task-leases.md. Runtime execution remains unimplemented.
+task-leases.md. These lease operations do not themselves launch a runtime; the operator local-worker command is separate.
 
 ## Workspace preparation
 
@@ -139,5 +142,16 @@ committed blobs without invoking checkout hooks/filters. Source edits and branch
 Coordination is checked under a write lock before/after preparation; expiry does not renew.
 Filesystem attempts have explicit preparing/prepared/failed manifests and are retained on failure.
 Files and SQLite are not one atomic transaction; a manifest is never runtime authority. Shared
-Git metadata/configuration and prototype limits are documented in task-workspaces.md. No migration
-beyond schema 5, execution adapter, or agent provider is added.
+Git metadata/configuration and prototype limits are documented in task-workspaces.md. Workspace preparation uses its existing schema-5 contracts; local worker execution adds schema 6.
+No model provider is bundled.
+
+## Local worker execution
+
+Migration 6 adds durable worker runs and one active managed run per task. Explicit operator CLI
+invocation grants one configured profile execution authority; assignment approval/briefs do not.
+The supervisor verifies a fresh prepared checkout, passes a current JSON brief without credentials,
+renews its lease, captures bounded output, and observes cancellation/context loss/timeouts. Process
+results never change Task lifecycle or certify criteria. MCP exposes read-only inspection only.
+Run updates preserve cancellation intent. Abrupt supervisor failure is fail-closed for new managed
+launches and requires operator reconciliation; no stored PID is adopted/signalled. Group signalling
+is not containment, and external effects are not fenced per action. See local-workers.md.

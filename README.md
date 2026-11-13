@@ -36,7 +36,8 @@ even if the working tree later changes.
 Indexing does not import or execute target code. Tracked symlinks are skipped; oversized,
 undecodable, and unparsable files make coverage partial. Source is stored locally in SQLite.
 The local MCP adapter serves an existing snapshot over stdio. Optional feature planning records
-unapproved drafts and tracked tasks. Bee execution, approval UI, and release automation remain future work.
+unapproved drafts and tracked tasks. Operator-configured local worker supervision is available; model-specific adapters, approval UI,
+and release automation remain future work.
 
 ## Spot-check it
 
@@ -72,7 +73,7 @@ criteria, and validation needs. Feasibility is a human/model-supplied proposal, 
 verified verdict. Draft submission never approves or executes work. The default MCP server stays
 read-only; `--enable-planning` adds planning and assistance tools, including draft writes.
 See [the planning guide](docs/planning.md).
-For an existing database, run `worker-bees init --db PATH` once to apply schema migrations through version 5.
+For an existing database, run `worker-bees init --db PATH` once to apply schema migrations through version 6.
 
 ## Agent guidance and acceptance review
 
@@ -114,6 +115,14 @@ process or validation command runs during preparation. See [task workspaces](doc
 
 ```bash
 uv run python scripts/spot_check.py --workspaces
+```
+
+An operator can run a fixed local worker profile under foreground supervision, with lease
+heartbeats, bounded logs, timeout, and cancellation. A successful process does not accept or
+complete its task. No model provider is bundled. See [local workers](docs/local-workers.md).
+
+```bash
+uv run python scripts/spot_check.py --workers
 ```
 
 Development checks:

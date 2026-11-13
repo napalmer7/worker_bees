@@ -5,7 +5,7 @@ from typing import Literal
 
 from worker_bees.approval_models import ApprovalReceipt, ApprovalRequest, TaskApproval, TaskPolicy
 from worker_bees.lease_state import invalidate_lease, lease_view, load_lease, now_ms
-from worker_bees.models import Index, PolicyDecision, Task
+from worker_bees.models import Index, PolicyDecision, Snapshot, Task
 from worker_bees.planning_models import StoredPlan
 from worker_bees.storage import Store
 
@@ -68,14 +68,14 @@ class Approvals:
         planned = next(entry for entry in proposal.tasks if entry.id == task_id)
         blockers: list[str] = []
         row = connection.execute(
-            "SELECT payload FROM snapshots "
+            "SELECT json_extract(payload, '$.snapshot') FROM snapshots "
             "WHERE json_extract(payload, '$.snapshot.repository') = ? "
             "ORDER BY sequence DESC LIMIT 1",
             (plan.snapshot.repository,),
         ).fetchone()
         if row is None:
             raise ValueError("repository has no indexed snapshot")
-        latest = Index.model_validate_json(row[0]).snapshot
+        latest = Snapshot.model_validate_json(row[0])
         excluded = {"id", "created_at"}
         if latest.model_dump(exclude=excluded) != plan.snapshot.model_dump(exclude=excluded):
             blockers.append("repository_index_changed")

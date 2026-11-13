@@ -128,3 +128,11 @@ Run `uv run python scripts/spot_check.py --workspaces --keep NEW_DIRECTORY` to i
 prepared detached worktree and exported task brief. It leaves task-workspace/checkout, task-brief.json,
 and manifest.json for inspection, with no retained bearer request. No target command or model is
 executed. See [task workspaces](task-workspaces.md) for exact limits and recovery behavior.
+
+## Local worker spot check
+
+Run `uv run python scripts/spot_check.py --workers --keep NEW_DIRECTORY` for a deterministic Python
+worker on the sample task. No model account or usage charges are involved. It prints the task ID,
+retains input/stdout/stderr artifacts, and verifies that process success does not complete the task.
+The selected local command is executed only in this explicitly invoked demo. See
+[local workers](local-workers.md) for profiles, supervision, and limitations.

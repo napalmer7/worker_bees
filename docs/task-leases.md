@@ -21,13 +21,14 @@ application is not changed. Tokens stay in memory during the demonstration and a
 or written to retained request files. Time expiry, competing claims, fencing, and rollback are
 covered by deterministic regression tests instead of sleeping in the sample.
 
-Existing databases require explicit migration 5:
+Existing databases require explicit migration through version 6:
 
 ```bash
 uv run worker-bees init --db .worker-bees/state.db
 ```
 
-Migration preserves tasks, plans, approvals, and source snapshots. The read-only query/server path
+The current local-worker runtime additionally requires schema 6. Migration preserves tasks, plans,
+approvals, and source snapshots. The read-only query/server path
 rejects older schemas until the operator migrates them.
 
 ## MCP capability opt-in
@@ -39,8 +40,8 @@ uv run worker-bees serve --db .worker-bees/state.db --snapshot SNAPSHOT_ID --ena
 | Mode | Tools | Database mutations |
 |---|---|---|
 | Default | 6 investigation tools | None |
-| --enable-planning | 17 investigation/planning/assistance/policy tools, two prompts | Draft submission only |
-| Both flags | 20 tools, two prompts | Draft submission and lease claim/renew/release |
+| --enable-planning | 18 investigation/planning/assistance/policy tools, two prompts | Draft submission only |
+| Both flags | 21 tools, two prompts | Draft submission and lease claim/renew/release |
 
 --enable-coordination requires --enable-planning. Planning alone can inspect reservations with
 get_task_lease but cannot mutate them. Operator approvals remain CLI-only. MCP clients cannot
@@ -137,8 +138,7 @@ an open lease in the same transaction as the approval/task update. Blocking/canc
 legacy lifecycle API also invalidates it atomically. Reapproval does not revive invalidated leases;
 a new fenced claim is required.
 
-Fencing currently protects these database operations only. No runtime or external resource consumer
-exists yet. A future runtime must recheck active credentials, approval, and the latest fencing number
+Fencing currently protects these database operations only. The local worker bridge observes leases, but does not fence each external effect. A future runtime must recheck active credentials, approval, and the latest fencing number
 before every protected effect; this PR does not stop an arbitrary external process. Expiry uses one
 local wall clock. A timestamp earlier than the recorded heartbeat is rejected as a detected rollback,
 but arbitrary clock jumps, database backups/restores, and distributed clocks are not fully solved.
@@ -152,3 +152,6 @@ transitions. Approval and reservation continue to have separate authority from e
 
 A lease holder can now export a scoped task brief; the operator can prepare a detached worktree
 at the original revision. This is preparation only, not a runtime. See [task workspaces](task-workspaces.md).
+
+An operator can now explicitly run a configured local process with lease supervision. This is
+separate authority from the lease itself. See [local workers](local-workers.md).

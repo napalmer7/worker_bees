@@ -34,7 +34,7 @@ uv run worker-bees check-task-policy negative-price-validation T1 --db .worker-b
 
 ## Review and record a real decision
 
-For an existing database, explicitly apply migrations through version 5 first:
+For an existing database, explicitly apply migrations through version 6 first:
 
 ```bash
 uv run worker-bees init --db .worker-bees/state.db
@@ -121,3 +121,6 @@ The legacy transition API still cannot promote planned tasks or enter execution.
 cancellation supervision, evidence-backed completion, action-specific
 execution policies, and integration/release approval remain future work. This gate supplies a
 reviewable consent boundary before those capabilities are added.
+
+The operator-only local worker command now grants one fixed profile invocation separate execution
+authority. Assignment approval still authorizes preparation only. See [local workers](local-workers.md).
