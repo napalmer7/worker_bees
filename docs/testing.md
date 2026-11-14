@@ -136,3 +136,10 @@ worker on the sample task. No model account or usage charges are involved. It pr
 retains input/stdout/stderr artifacts, and verifies that process success does not complete the task.
 The selected local command is executed only in this explicitly invoked demo. See
 [local workers](local-workers.md) for profiles, supervision, and limitations.
+
+## Dual-provider offline spot check
+
+Run `uv run python scripts/spot_check.py --providers --keep NEW_DIRECTORY` to exercise both OpenAI
+and Gemini response paths through real supervised workers with mocked HTTP. It retains explicitly
+marked synthetic proposal/usage artifacts and never applies the diff or calls a live API.
+See [AI provider workers](ai-provider-workers.md) for live operator configuration and dry runs.

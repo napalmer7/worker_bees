@@ -118,3 +118,35 @@ def test_worker_spot_check_runs_deterministic_profile_and_retains_logs(tmp_path)
     envelope = json.loads((runs[0] / "input.json").read_text())
     assert envelope["protocol_version"] == 1
     assert "token" not in envelope
+
+
+def test_provider_spot_check_runs_both_mock_adapters(tmp_path):
+    import json
+
+    project = Path(__file__).resolve().parents[1]
+    workspace = tmp_path / "provider demo"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(project / "scripts" / "spot_check.py"),
+            "--providers",
+            "--keep",
+            str(workspace),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    for name in ["openai", "gemini"]:
+        assert f"Mocked {name} worker exports a proposal" in result.stdout
+    reports = [
+        json.loads(path.read_text())
+        for path in (workspace / "task-workspace" / "runs").glob("*/provider/report.json")
+    ]
+    assert {item["provider"] for item in reports} == {"openai", "gemini"}
+    assert all(item["network_mode"] == "injected_transport" for item in reports)
+    assert (
+        "return max(value, 0)"
+        in (workspace / "task-workspace" / "checkout" / "shop" / "pricing.py").read_text()
+    )

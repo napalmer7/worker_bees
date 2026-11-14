@@ -1,6 +1,6 @@
 # Python foundation decisions
 
-Status: Python investigation, local MCP, planning, and agent assistance, November 13, 2026.
+Status: Python investigation, local MCP, planning, and agent assistance, November 14, 2026.
 
 ## Scope
 
@@ -118,7 +118,7 @@ client must obtain authorized source/artifacts and perform semantic/independent 
 docs/agent-guidance.md for capabilities, limitations, and examples.
 
 The first runtime is an operator-configured POSIX subprocess bridge with foreground supervision.
-No model provider is assumed or bundled.
+No model is chosen implicitly; the OpenAI/Gemini proposal adapters are explicit operator profiles.
 
 The existing specification documents remain the behavioral contract. Review/release authority
 is not conferred by role names or a task record. The project's license is AGPL-3.0-only;
@@ -143,7 +143,7 @@ Coordination is checked under a write lock before/after preparation; expiry does
 Filesystem attempts have explicit preparing/prepared/failed manifests and are retained on failure.
 Files and SQLite are not one atomic transaction; a manifest is never runtime authority. Shared
 Git metadata/configuration and prototype limits are documented in task-workspaces.md. Workspace preparation uses its existing schema-5 contracts; local worker execution adds schema 6.
-No model provider is bundled.
+No provider account or default model is bundled.
 
 ## Local worker execution
 
@@ -155,3 +155,14 @@ results never change Task lifecycle or certify criteria. MCP exposes read-only i
 Run updates preserve cancellation intent. Abrupt supervisor failure is fail-closed for new managed
 launches and requires operator reconciliation; no stored PID is adopted/signalled. Group signalling
 is not containment, and external effects are not fenced per action. See local-workers.md.
+
+## One-shot AI proposals
+
+Provider workers consume the existing input protocol with explicit operator context paths and
+model/key-variable configuration. They send only selected committed UTF-8 context and task data to
+fixed provider origins, with one request and no retries, redirects, model tools, or source writes.
+They normalize status/usage and apply shared local path/base-hash/declared-coverage guards before
+exporting unverified proposal JSON/diffs. Logs/artifacts retain revision and request/context hashes,
+not credentials or raw provider errors/thinking. Dry runs and the default provider demo are offline.
+The live APIs were not invoked during implementation. No migration beyond schema 6 is added.
+See ai-provider-workers.md for request formats, operator consent, limits, and compatibility evidence.

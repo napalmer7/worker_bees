@@ -175,7 +175,13 @@ async def check_planning_mcp(database, snapshot, proposal):
 
 
 def check_planning(
-    database, snapshot, workspace, coordination=False, workspaces=False, workers=False
+    database,
+    snapshot,
+    workspace,
+    coordination=False,
+    workspaces=False,
+    workers=False,
+    providers=False,
 ):
     proposal = json.loads((PROJECT / "examples" / "feature-plan.json").read_text())
     proposal["snapshot_id"] = snapshot
@@ -241,11 +247,18 @@ def check_planning(
         coordination=coordination,
         workspaces=workspaces,
         workers=workers,
+        providers=providers,
     )
 
 
 def check_approvals(
-    database, workspace, plan_id, coordination=False, workspaces=False, workers=False
+    database,
+    workspace,
+    plan_id,
+    coordination=False,
+    workspaces=False,
+    workers=False,
+    providers=False,
 ):
     policy = cli(database, "check-task-policy", plan_id, "T1")
     require(policy["policy"]["decision"] == "require_approval", "Draft requires operator consent")
@@ -268,7 +281,11 @@ def check_approvals(
         asyncio.run(
             asyncio.wait_for(
                 check_leases_mcp(
-                    database, policy, workspace if workspaces else None, workers=workers
+                    database,
+                    policy,
+                    workspace if workspaces else None,
+                    workers=workers,
+                    providers=providers,
                 ),
                 timeout=60,
             )
@@ -296,7 +313,7 @@ def check_approvals(
     print("PASS  Simulated operator approval/revocation is audited and never enables execution")
 
 
-async def check_leases_mcp(database, policy, workspace=None, workers=False):
+async def check_leases_mcp(database, policy, workspace=None, workers=False, providers=False):
     parameters = StdioServerParameters(
         command=sys.executable,
         args=[
@@ -404,6 +421,58 @@ async def check_leases_mcp(database, policy, workspace=None, workers=False):
                     inspected = await client.call_tool("get_worker_run", {"run_id": run["id"]})
                     require(not inspected.is_error, "MCP worker inspection failed")
                     print("PASS  Deterministic operator worker exits without completing the task")
+            if providers:
+                # Each provider is exercised through the actual worker supervisor, with mock HTTP.
+                with tempfile.TemporaryDirectory(prefix="worker-bees-provider-context-") as private:
+                    context_file = Path(private) / "context.json"
+                    context_file.write_text(json.dumps(context))
+                    context_file.chmod(0o600)
+                    for provider in ["openai", "gemini"]:
+                        config_file = workspace / f"{provider}-provider.json"
+                        config_file.write_text(
+                            json.dumps(
+                                {
+                                    "provider": provider,
+                                    "model": "offline-mock-model",
+                                    "context_paths": ["shop/pricing.py"],
+                                }
+                            )
+                        )
+                        profile_file = workspace / f"{provider}-worker-profile.json"
+                        profile_file.write_text(
+                            json.dumps(
+                                {
+                                    "id": f"offline-{provider}",
+                                    "argv": [
+                                        sys.executable,
+                                        str(PROJECT / "scripts" / "mock_provider_worker.py"),
+                                        str(config_file),
+                                    ],
+                                    "timeout_seconds": 15,
+                                }
+                            )
+                        )
+                        run = cli(
+                            database,
+                            "run-worker",
+                            str(context_file),
+                            str(workspace / "task-workspace"),
+                            str(profile_file),
+                        )
+                        require(run["status"] == "exited", "Mock provider worker failed")
+                        report = json.loads(
+                            (Path(run["directory"]) / "provider" / "report.json").read_text()
+                        )
+                        require(
+                            report["status"] == "proposed"
+                            and report["network_mode"] == "injected_transport",
+                            "Expected mock proposal",
+                        )
+                        require(Path(report["diff_file"]).is_file(), "Expected reviewable diff")
+                        print(
+                            f"PASS  Mocked {provider} worker exports a proposal "
+                            "without applying changes"
+                        )
             require(manifest["status"] == "prepared", "Sample workspace must be prepared")
             require(
                 manifest["execution_available"] is False, "Workspace must not authorize execution"
@@ -425,9 +494,15 @@ def command_text(arguments):
 
 
 def spot_check(
-    workspace, keep=False, planning=False, coordination=False, workspaces=False, workers=False
+    workspace,
+    keep=False,
+    planning=False,
+    coordination=False,
+    workspaces=False,
+    workers=False,
+    providers=False,
 ):
-    workspaces = workspaces or workers
+    workspaces = workspaces or workers or providers
     coordination = coordination or workspaces
     planning = planning or coordination
     repository = workspace / "repository"
@@ -478,6 +553,7 @@ def spot_check(
             coordination=coordination,
             workspaces=workspaces,
             workers=workers,
+            providers=providers,
         )
     print(f"\nCommit:   {status['snapshot']['commit']}")
     print(f"Snapshot: {snapshot}")
@@ -521,6 +597,11 @@ def main():
         action="store_true",
         help="Also run a deterministic operator-configured demo worker",
     )
+    parser.add_argument(
+        "--providers",
+        action="store_true",
+        help="Exercise both provider payloads with mocked HTTP, never live APIs",
+    )
     arguments = parser.parse_args()
     try:
         if arguments.keep:
@@ -534,6 +615,7 @@ def main():
                 coordination=arguments.coordination,
                 workspaces=arguments.workspaces,
                 workers=arguments.workers,
+                providers=arguments.providers,
             )
         else:
             with tempfile.TemporaryDirectory(prefix="worker-bees-spot-check-") as temporary:
@@ -543,6 +625,7 @@ def main():
                     coordination=arguments.coordination,
                     workspaces=arguments.workspaces,
                     workers=arguments.workers,
+                    providers=arguments.providers,
                 )
             print("\nTemporary demo removed. Use --keep NEW_DIRECTORY to inspect it afterward.")
     except (RuntimeError, OSError, subprocess.SubprocessError, TimeoutError) as error:
