@@ -3,6 +3,7 @@
 import signal
 import sqlite3
 import subprocess
+import sys
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -13,6 +14,7 @@ from typing import Annotated, cast
 import typer
 from pydantic import BaseModel
 
+from worker_bees.ai_worker import run_provider
 from worker_bees.analysis import build_index
 from worker_bees.approval_models import ApprovalRequest
 from worker_bees.approvals import Approvals
@@ -418,3 +420,13 @@ def cancel_worker_run(
     with errors():
         planner = planning(db, snapshot, writable=True)
         output(Workers(planner.store, planner.index).cancel(run_id, reason))
+
+
+@app.command()
+def ai_worker(config: Path, dry_run: bool = False) -> None:
+    """Supervised one-shot OpenAI/Gemini proposal adapter. Model output never applies changes."""
+    with errors():
+        report = run_provider(config, sys.stdin.buffer, Path.cwd(), dry_run=dry_run)
+        output(report)
+        if report.status == "failed":
+            raise typer.Exit(2)

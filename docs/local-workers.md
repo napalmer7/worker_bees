@@ -2,8 +2,8 @@
 
 Worker Bees can run one operator-selected local process for a prepared, actively leased task.
 This is a provider-neutral bridge: a Python adapter can read a JSON task brief, call a chosen AI
-provider, and work in the prepared checkout. No model SDK, provider account, default AI command,
-or automatic deployment is included. The bundled demonstration is deterministic Python, not an AI
+provider, and work in the prepared checkout. OpenAI and Gemini proposal adapters are now available separately. No model SDK, provider account,
+default model, or automatic deployment is included. The bundled demonstration is deterministic Python, not an AI
 implementation or proof that the sample feature is satisfied.
 
 ## Try the full workflow
@@ -165,3 +165,6 @@ Clock assumptions and possible database-lock delays still apply. A local worker 
 an effect between revocation/expiry and detection. Stronger fencing of external effects requires a
 cooperative capability adapter or isolated execution service. Per-tool action policy, container
 isolation, provider integration, recovery/restart, and evidence-backed completion remain future work.
+
+See [OpenAI/Gemini workers](ai-provider-workers.md) for the first one-shot proposal adapters,
+explicit source context, dry runs, limits, and offline provider demonstrations.

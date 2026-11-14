@@ -119,11 +119,22 @@ uv run python scripts/spot_check.py --workspaces
 
 An operator can run a fixed local worker profile under foreground supervision, with lease
 heartbeats, bounded logs, timeout, and cancellation. A successful process does not accept or
-complete its task. No model provider is bundled. See [local workers](docs/local-workers.md).
+complete its task. OpenAI and Gemini proposal adapters can now use that bridge. See [local workers](docs/local-workers.md).
 
 ```bash
 uv run python scripts/spot_check.py --workers
 ```
+
+OpenAI Responses and Gemini Developer API adapters share proposal validation and usage reporting.
+They export reviewable changes without applying them or running proposed tests. Context paths,
+models, credentials, and limits are operator-selected. See [AI provider workers](docs/ai-provider-workers.md).
+
+```bash
+uv run python scripts/spot_check.py --providers
+```
+
+This spot check mocks both APIs and needs no credentials. Live configuration examples and dry-run
+instructions are in the provider guide.
 
 Development checks:
 

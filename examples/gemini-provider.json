@@ -1,0 +1,14 @@
+{
+  "provider": "gemini",
+  "model": "REPLACE_WITH_SUPPORTED_MODEL_ID",
+  "context_paths": [
+    "shop/pricing.py"
+  ],
+  "allowed_new_paths": [
+    "tests/test_pricing.py"
+  ],
+  "max_output_tokens": 4096,
+  "timeout_seconds": 60,
+  "max_context_bytes": 32768,
+  "max_request_bytes": 131072
+}

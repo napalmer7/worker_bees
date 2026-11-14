@@ -1,0 +1,15 @@
+{
+  "id": "openai-proposal",
+  "argv": [
+    "/absolute/path/to/python",
+    "-m",
+    "worker_bees",
+    "ai-worker",
+    "/absolute/path/to/openai-provider.json"
+  ],
+  "inherit_environment": [
+    "OPENAI_API_KEY"
+  ],
+  "timeout_seconds": 180,
+  "max_output_bytes": 65536
+}

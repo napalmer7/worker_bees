@@ -1,6 +1,6 @@
 # Implementation status
 
-Python investigation, planning, and agent assistance, November 13, 2026.
+Python investigation, planning, and agent assistance, November 14, 2026.
 
 ## Implemented
 
@@ -44,13 +44,18 @@ Python investigation, planning, and agent assistance, November 13, 2026.
 - Migration 6 durable process outcomes and active-run uniqueness; read-only MCP inspection with
   stale-supervision reporting. Process success never establishes task acceptance/completion.
 
+- OpenAI Responses and Gemini generateContent one-shot proposal workers sharing strict local
+  source/path/hash/coverage validation, bounded single requests, usage reporting, and private artifacts.
+- Configurable models/credential environment variables, offline/dry-run preflight, and a full mocked
+  dual-provider spot check. No live API call was made during implementation; no new migration/tool.
+
 ## Next
 
 1. Extend the curated evaluation set and measure results against text-search investigation.
 2. Validate a selected desktop MCP host; the SDK-client stdio path is already tested.
 3. Evaluate model/human-authored plan quality against representative feature requests.
-4. Integrate a selected AI provider and add isolated/cooperative capabilities, action policy,
-   and safe supervisor recovery/restart. The local subprocess bridge is implemented.
+4. Add isolated/cooperative capabilities, action policy, controlled patch application/validation,
+   and safe supervisor recovery/restart. The local bridge and two proposal providers are implemented.
    Assignment approval, leases, and operator per-run execution consent are implemented;
    general agent action policy and integration/release approval remain future work.
 
@@ -86,3 +91,7 @@ entries/limits, stale credentials/expiry, retained failures, audit rollback, CLI
 
 Worker tests cover execution/exit failures, heartbeat, cancellation/revocation, timeout, output caps,
 startup audit rollback, interruption/termination, stale inspection, migration, CLI, and MCP boundaries.
+
+Provider tests cover both REST shapes, strict/local proposal validation, usage mapping, refusals,
+truncation, one-attempt failures, no redirects, context/hash/budget guards, dry runs, unchanged files,
+and real supervisor runs against mock HTTP. Model output quality/live compatibility remain unverified.
